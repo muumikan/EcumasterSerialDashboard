@@ -1,0 +1,64 @@
+
+This directory is intended for PlatformIO Test Runner and project tests.
+
+Unit Testing is a software testing method by which individual units of
+source code, sets of one or more MCU program modules together with associated
+control data, usage procedures, and operating procedures, are tested to
+determine whether they are fit for use. Unit testing finds problems early
+in the development cycle.
+
+More information about PlatformIO Unit Testing:
+- https://docs.platformio.org/en/latest/advanced/unit-testing/index.html
+
+
+#include <EMUSerial.h>
+EMUSerial emu(Serial1);
+
+void setup()
+{
+	Serial.begin(19200); //Debugging
+	Serial1.begin(19200, SERIAL_8N1, 16, 17); //EMU Serial setup, 8 Data Bits 1 Stopbit, RX Pin, TX Pin
+}
+
+void loop()
+{
+	emu.checkEmuSerial();
+
+	Serial.println(emu.emu_data.MAP); //uint16_t
+	Serial.println(emu.emu_data.Batt); //float  
+    delay(500);
+}
+
+
+#include <Arduino.h>
+
+HardwareSerial ecuSerial(2);
+
+void setup()
+{
+    Serial.begin(19200);
+
+    ecuSerial.begin(
+        19200,
+        SERIAL_8N1,
+        16, // RX
+        17  // TX
+    );
+
+    Serial.println();
+    Serial.println("HEX monitor started");
+}
+
+void loop()
+{
+    while (ecuSerial.available())
+    {
+        uint8_t b = ecuSerial.read();
+
+        if (b < 0x10)
+            Serial.print('0');
+
+        Serial.print(b, HEX);
+        Serial.print(' ');
+    }
+}
