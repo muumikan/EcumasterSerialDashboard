@@ -4,13 +4,13 @@
 
 #include "ecu_data_provider.hpp"
 #include "engine_data_model.hpp"
+#include "main_screen.hpp"
 #include "serial_report.hpp"
 
 namespace ecu {
 
 // Wires the layers together and owns their lifetimes, so main.cpp stays a
-// two-line Arduino shim. The LVGL screens will be added here later, next to
-// the serial diagnostics.
+// two-line Arduino shim.
 class AppController {
 public:
     AppController();
@@ -25,6 +25,8 @@ private:
     EngineDataModel model_;
     EcuDataProvider provider_;
     SerialReport report_;
+    MainScreen screen_;
+    bool displayReady_ = false;
 };
 
 }  // namespace ecu
