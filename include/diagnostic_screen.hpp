@@ -24,7 +24,7 @@ private:
     lv_obj_t* celBits_[16] = {};
 
     // Peaks column.
-    lv_obj_t* peakValues_[9] = {};
+    lv_obj_t* peakValues_[11] = {};
 };
 
 }  // namespace ecu

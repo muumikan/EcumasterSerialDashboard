@@ -32,6 +32,11 @@ constexpr uint16_t kEngineRunningRpm = 500;
 //
 // Lives beside the model rather than inside the screens: the same thresholds
 // then apply on every page instead of being copied into four of them.
+//
+// An alarm never moves the page. It colours the cell that owns the value and
+// names itself in the status bar, which is visible from every page anyway;
+// taking the screen away from the driver bought nothing that the status bar
+// was not already showing.
 class AlarmEngine {
 public:
     void evaluate(const EngineSnapshot& snapshot);
@@ -44,18 +49,11 @@ public:
 
     bool engineRunning() const { return running_; }
 
-    // A critical alarm asks once, on its rising edge, for the page that shows
-    // it. Consuming the request means the dash never fights the driver: swipe
-    // away and it stays away until the condition clears and returns.
-    bool takeCriticalPageRequest(uint8_t& pageOut);
-
 private:
     AlarmSeverity severity_[static_cast<uint8_t>(AlarmId::Count)] = {};
     AlarmSeverity worst_ = AlarmSeverity::None;
     char worstText_[24] = {0};
     bool running_ = false;
-    bool pageRequested_ = false;
-    uint8_t requestedPage_ = 0;
 };
 
 }  // namespace ecu

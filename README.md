@@ -43,10 +43,13 @@ Above every page sit two always-on layers: a 6 px shift-light strip, lit from
 worst active alarm regardless of which page is up.
 
 An out-of-range value lights its own cell — amber for a warning, red for
-critical — rather than taking over the screen. A critical alarm also brings up
-the page that shows it, once, so swiping away is respected. Alarms are gated
-on RPM > 500: with the key on and the engine stopped, oil pressure reads 0 bar
-and battery voltage sits near 12.4 V, and neither is a fault.
+critical — and names itself in the status bar. Nothing but a swipe ever changes
+the page. Alarms are gated on RPM > 500: with the key on and the engine
+stopped, oil pressure reads 0 bar and battery voltage sits near 12.4 V, and
+neither is a fault.
+
+At power-up the dash opens on Drive and sweeps the shift lights, so every
+segment is confirmed working before the car moves.
 
 ## Building
 

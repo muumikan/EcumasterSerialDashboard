@@ -17,10 +17,14 @@ namespace ecu {
 // never left showing diagnostics on the move.
 constexpr uint32_t kIdleReturnMs = 30000;
 
+// How long the shift lights sweep at power-up, the way a race dash does.
+constexpr uint32_t kBootSweepMs = 900;
+
 // Owns the always-on chrome (shift lights, status bar) and page navigation.
 //
-// The pages below it only render; deciding what is shown, and when a critical
-// alarm pulls a page forward, happens here.
+// The pages below it only render; deciding what is shown happens here. Nothing
+// but the driver's own swipe changes the page - alarms announce themselves in
+// the status bar, which is on screen whichever page is up.
 class DashUi {
 public:
     void begin(lv_obj_t* screen);
@@ -37,6 +41,8 @@ private:
     static constexpr uint8_t kShiftSegments = 14;
 
     void buildChrome(lv_obj_t* screen);
+    void setShiftSegments(uint8_t lit);
+    bool runBootSweep(uint32_t nowMs);
     void updateShiftLights(uint16_t rpm);
     void updateStatusBar(const EngineDataModel& model, uint32_t nowMs);
 
@@ -58,6 +64,7 @@ private:
 
     uint8_t page_ = 0;
     uint8_t litSegments_ = 0xFF;
+    uint32_t bootSweepEndMs_ = 0;
     uint32_t lastRevision_ = UINT32_MAX;
     uint32_t lastInteractionMs_ = 0;
     LinkState lastLink_ = LinkState::Offline;

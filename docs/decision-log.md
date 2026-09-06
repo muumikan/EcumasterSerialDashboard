@@ -4,22 +4,21 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
-## Alarms colour the cell; only critical ones move the page
+## Alarms colour the cell and name themselves; they never move the page
 
 An out-of-range value lights its own tile — amber for a warning, red for
-critical — and the status bar names the worst one on every page. A full-screen
-takeover was built first and then dropped: it hides everything else at exactly
-the moment the driver most wants context.
+critical — and the status bar names the worst one. The status bar is on screen
+whichever page is up, so the driver already sees it.
 
-Page switching is narrower still. A **critical** alarm requests the page that
-shows it, once, on its rising edge; the request is then consumed. A warning
-never moves the page.
+Two more aggressive designs were built and then removed. A full-screen takeover
+hid everything else at exactly the moment the driver most wants context. Pulling
+the page that owns the value was gentler but still bought nothing the status bar
+was not already showing, while taking the screen away from whatever the driver
+had deliberately chosen to look at.
 
-The reason is the failure mode of the obvious alternative. A dash that jumps
-whenever a condition is true fights the driver: coolant sitting at 101 °C up a
-long hill would drag the screen back every time they swiped away. Rising-edge
-plus consume means the dash speaks once and then respects the choice, and only
-speaks again if the condition clears and returns.
+What remains is the quiet version: colour where the value lives, one line of
+text that follows you across pages, and the page changes only when a thumb
+changes it.
 
 ## Alarms are gated on RPM > 500
 

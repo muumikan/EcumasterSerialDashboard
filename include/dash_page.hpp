@@ -15,8 +15,10 @@ struct RunPeaks {
     uint16_t mapKpa = 0;
     int16_t cltC = 0;
     int8_t iatC = 0;
-    float oilPressureBar = 0.0f;
-    float fuelPressureBar = 0.0f;
+    float oilPressureMinBar = 0.0f;
+    float oilPressureMaxBar = 0.0f;
+    float fuelPressureMinBar = 0.0f;
+    float fuelPressureMaxBar = 0.0f;
     float lambdaMin = 0.0f;
     float knockLevelV = 0.0f;
     float injDutyPct = 0.0f;

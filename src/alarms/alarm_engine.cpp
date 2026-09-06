@@ -7,7 +7,6 @@ namespace {
 
 struct AlarmRule {
     AlarmId id;
-    uint8_t page;  // page that displays this value
     AlarmSeverity (*evaluate)(const EngineSnapshot&);
     void (*format)(const EngineSnapshot&, char*, size_t);
 };
@@ -86,20 +85,17 @@ void intakeAirText(const EngineSnapshot& s, char* out, size_t n) {
     snprintf(out, n, "IAT %d C", static_cast<int>(s.iatC));
 }
 
-// Page indices match the screen order in DashUi.
-constexpr uint8_t kPageDrive = 0;
-constexpr uint8_t kPageTune = 1;
-constexpr uint8_t kPageTemps = 2;
-
+// Order is priority order: when several alarms share a severity, the first
+// one here is the one the status bar names.
 const AlarmRule kRules[] = {
-    { AlarmId::OilPressure,  kPageDrive, oilPressure,  oilPressureText },
-    { AlarmId::Coolant,      kPageDrive, coolant,      coolantText },
-    { AlarmId::Lean,         kPageDrive, lean,         leanText },
-    { AlarmId::Battery,      kPageDrive, battery,      batteryText },
-    { AlarmId::Knock,        kPageTune,  knock,        knockText },
-    { AlarmId::InjectorDuty, kPageTune,  injectorDuty, injectorDutyText },
-    { AlarmId::FuelPressure, kPageTemps, fuelPressure, fuelPressureText },
-    { AlarmId::IntakeAir,    kPageTemps, intakeAir,    intakeAirText },
+    { AlarmId::OilPressure,  oilPressure,  oilPressureText },
+    { AlarmId::Coolant,      coolant,      coolantText },
+    { AlarmId::Lean,         lean,         leanText },
+    { AlarmId::Battery,      battery,      batteryText },
+    { AlarmId::Knock,        knock,        knockText },
+    { AlarmId::InjectorDuty, injectorDuty, injectorDutyText },
+    { AlarmId::FuelPressure, fuelPressure, fuelPressureText },
+    { AlarmId::IntakeAir,    intakeAir,    intakeAirText },
 };
 constexpr size_t kRuleCount = sizeof(kRules) / sizeof(kRules[0]);
 
@@ -115,14 +111,8 @@ void AlarmEngine::evaluate(const EngineSnapshot& s) {
         const AlarmRule& rule = kRules[i];
         const uint8_t slot = static_cast<uint8_t>(rule.id);
 
-        const AlarmSeverity previous = severity_[slot];
         const AlarmSeverity now = running_ ? rule.evaluate(s) : AlarmSeverity::None;
         severity_[slot] = now;
-
-        if (now == AlarmSeverity::Critical && previous != AlarmSeverity::Critical) {
-            requestedPage_ = rule.page;
-            pageRequested_ = true;
-        }
 
         if (now > worst_) {
             worst_ = now;
@@ -133,15 +123,6 @@ void AlarmEngine::evaluate(const EngineSnapshot& s) {
 
 AlarmSeverity AlarmEngine::severity(AlarmId id) const {
     return severity_[static_cast<uint8_t>(id)];
-}
-
-bool AlarmEngine::takeCriticalPageRequest(uint8_t& pageOut) {
-    if (!pageRequested_) {
-        return false;
-    }
-    pageOut = requestedPage_;
-    pageRequested_ = false;
-    return true;
 }
 
 }  // namespace ecu

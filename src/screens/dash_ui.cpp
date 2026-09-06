@@ -55,7 +55,9 @@ void DashUi::begin(lv_obj_t* screen) {
     lv_obj_add_event_cb(screen, gestureCb, LV_EVENT_GESTURE, this);
     lv_obj_add_event_cb(screen, pressedCb, LV_EVENT_PRESSED, this);
 
+    // The driving page is what the car powers up into.
     showPage(0);
+    bootSweepEndMs_ = lv_tick_get() + kBootSweepMs;
 }
 
 void DashUi::buildChrome(lv_obj_t* screen) {
@@ -122,17 +124,7 @@ void DashUi::showPage(uint8_t index) {
     lastInteractionMs_ = lv_tick_get();
 }
 
-void DashUi::updateShiftLights(uint16_t rpm) {
-    int lit = 0;
-    if (rpm > kShiftFirstRpm) {
-        lit = ((rpm - kShiftFirstRpm) * kShiftSegments) / (kShiftLastRpm - kShiftFirstRpm);
-        if (lit > kShiftSegments) lit = kShiftSegments;
-    }
-    if (static_cast<uint8_t>(lit) == litSegments_) {
-        return;
-    }
-    litSegments_ = static_cast<uint8_t>(lit);
-
+void DashUi::setShiftSegments(uint8_t lit) {
     for (uint8_t i = 0; i < kShiftSegments; ++i) {
         lv_color_t color = theme::track();
         if (i < lit) {
@@ -146,6 +138,52 @@ void DashUi::updateShiftLights(uint16_t rpm) {
         }
         lv_obj_set_style_bg_color(shift_[i], color, 0);
     }
+}
+
+// Power-up sweep: fill left to right, hold everything red, then clear. It is
+// the one moment the driver can confirm every segment works, and it costs
+// nothing but the time the panel spends waiting for the first ECU frame.
+bool DashUi::runBootSweep(uint32_t nowMs) {
+    if (bootSweepEndMs_ == 0) {
+        return false;
+    }
+
+    const int32_t remaining = static_cast<int32_t>(bootSweepEndMs_ - nowMs);
+    if (remaining <= 0) {
+        bootSweepEndMs_ = 0;
+        litSegments_ = 0xFF;  // force the next real update to repaint
+        setShiftSegments(0);
+        return false;
+    }
+
+    const uint32_t elapsed = kBootSweepMs - static_cast<uint32_t>(remaining);
+
+    if (elapsed < kBootSweepMs / 2) {
+        // fill
+        const uint8_t lit = static_cast<uint8_t>((elapsed * kShiftSegments) / (kBootSweepMs / 2)) + 1;
+        setShiftSegments(lit > kShiftSegments ? kShiftSegments : lit);
+    } else if (elapsed < (kBootSweepMs * 3) / 4) {
+        // hold every segment red
+        for (uint8_t i = 0; i < kShiftSegments; ++i) {
+            lv_obj_set_style_bg_color(shift_[i], theme::crit(), 0);
+        }
+    } else {
+        setShiftSegments(0);
+    }
+    return true;
+}
+
+void DashUi::updateShiftLights(uint16_t rpm) {
+    int lit = 0;
+    if (rpm > kShiftFirstRpm) {
+        lit = ((rpm - kShiftFirstRpm) * kShiftSegments) / (kShiftLastRpm - kShiftFirstRpm);
+        if (lit > kShiftSegments) lit = kShiftSegments;
+    }
+    if (static_cast<uint8_t>(lit) == litSegments_) {
+        return;
+    }
+    litSegments_ = static_cast<uint8_t>(lit);
+    setShiftSegments(static_cast<uint8_t>(lit));
 }
 
 void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
@@ -175,19 +213,16 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
 }
 
 void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
+    const bool sweeping = runBootSweep(nowMs);
     const bool changed = model.revision() != lastRevision_;
 
     if (changed) {
         lastRevision_ = model.revision();
         alarms_.evaluate(model.snapshot());
         peaks_.record(model.snapshot());
-        updateShiftLights(model.snapshot().rpm);
-    }
-
-    // A critical alarm asks for its page once, on the rising edge.
-    uint8_t requested = 0;
-    if (alarms_.takeCriticalPageRequest(requested) && requested != page_) {
-        showPage(requested);
+        if (!sweeping) {
+            updateShiftLights(model.snapshot().rpm);
+        }
     }
 
     // Idle timeout: never leave a non-driving page up on the move.

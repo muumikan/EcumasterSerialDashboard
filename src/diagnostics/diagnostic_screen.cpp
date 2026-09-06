@@ -30,9 +30,11 @@ lv_obj_t* makeRow(lv_obj_t* parent, lv_coord_t y, const char* caption) {
     return right;
 }
 
-const char* kPeakCaptions[9] = {
+const char* kPeakCaptions[11] = {
     "RPM max", "MAP max", "CLT max", "IAT max",
-    "Oil P min", "Fuel P min", "Lambda min", "Knock max", "Inj DC max",
+    "Oil P max", "Oil P min",
+    "Fuel P max", "Fuel P min",
+    "Lambda min", "Knock max", "Inj DC max",
 };
 
 }  // namespace
@@ -73,7 +75,7 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_border_side(right, LV_BORDER_SIDE_LEFT, 0);
 
     makeHeading(right, 0, "PEAKS THIS RUN");
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 11; ++i) {
         peakValues_[i] = makeRow(right, 18 + kRowHeight * i, kPeakCaptions[i]);
     }
 }
@@ -117,7 +119,7 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     }
 
     if (!peaks.seeded) {
-        for (int i = 0; i < 9; ++i) {
+        for (int i = 0; i < 11; ++i) {
             lv_label_set_text(peakValues_[i], "--");
         }
         return;
@@ -131,16 +133,20 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     lv_label_set_text(peakValues_[2], text);
     snprintf(text, sizeof(text), "%d C", static_cast<int>(peaks.iatC));
     lv_label_set_text(peakValues_[3], text);
-    snprintf(text, sizeof(text), "%.1f bar", peaks.oilPressureBar);
+    snprintf(text, sizeof(text), "%.1f bar", peaks.oilPressureMaxBar);
     lv_label_set_text(peakValues_[4], text);
-    snprintf(text, sizeof(text), "%.1f bar", peaks.fuelPressureBar);
+    snprintf(text, sizeof(text), "%.1f bar", peaks.oilPressureMinBar);
     lv_label_set_text(peakValues_[5], text);
-    snprintf(text, sizeof(text), "%.2f", peaks.lambdaMin);
+    snprintf(text, sizeof(text), "%.1f bar", peaks.fuelPressureMaxBar);
     lv_label_set_text(peakValues_[6], text);
-    snprintf(text, sizeof(text), "%.1f V", peaks.knockLevelV);
+    snprintf(text, sizeof(text), "%.1f bar", peaks.fuelPressureMinBar);
     lv_label_set_text(peakValues_[7], text);
-    snprintf(text, sizeof(text), "%d %%", static_cast<int>(peaks.injDutyPct));
+    snprintf(text, sizeof(text), "%.2f", peaks.lambdaMin);
     lv_label_set_text(peakValues_[8], text);
+    snprintf(text, sizeof(text), "%.1f V", peaks.knockLevelV);
+    lv_label_set_text(peakValues_[9], text);
+    snprintf(text, sizeof(text), "%d %%", static_cast<int>(peaks.injDutyPct));
+    lv_label_set_text(peakValues_[10], text);
 }
 
 }  // namespace ecu
