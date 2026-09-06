@@ -23,10 +23,13 @@ constexpr uint32_t kEcuBaud = 19200;
 // GT911 touch I2C clock here and must not be reused for the ECU.
 constexpr int8_t kEcuRxPin = 18;  // UART1-OUT RX
 
-// The ECU link is read-only, so no TX pin is attached to UART1 at all.
-// The connector's TX line is GPIO17; leaving it unassigned makes it
-// physically impossible for the dashboard to talk back.
-constexpr int8_t kEcuTxPin = -1;
+// TX is attached because that is the wiring the link was verified with.
+//
+// It is never used: nothing in this project writes to the ECU port, and the
+// EMU's extension port is a one-way stream in the first place (see the BT
+// Module manual, "Data transmission: One-way"). Keeping the pin assigned
+// matches the tested configuration rather than changing two things at once.
+constexpr int8_t kEcuTxPin = 17;  // UART1-OUT TX - assigned, never driven
 
 // ----------------------------------------------------------------- Console --
 // USB CDC. Matches monitor_speed in platformio.ini.

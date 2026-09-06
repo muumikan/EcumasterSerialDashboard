@@ -15,6 +15,10 @@ void EcuDataProvider::begin(uint32_t baud, int8_t rxPin, int8_t txPin) {
     uart_.begin(baud, SERIAL_8N1, rxPin, txPin);
 }
 
+// The link is read-only by construction: this file and the adapter below it
+// are the only code that touches the ECU port, and neither ever calls write(),
+// print() or any other transmitting method on it.
+
 void EcuDataProvider::loop(uint32_t nowMs) {
     if (adapter_.poll() == 0) {
         return;  // nothing arrived; leave the model's timestamps alone
