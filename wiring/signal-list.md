@@ -1,35 +1,73 @@
 # Signal list — ECU to dashboard
 
-Source for the car side: `Carina_1GGTE_Ecumaster_rev16.pdf`.
+Sources:
 
-## The link: EMU Classic → MAX3232 → ESP32-S3
+- Car loom: `Carina_1GGTE_Ecumaster_rev16.pdf`
+- ECU port: [Ecumaster BT Module manual](https://www.ecumaster.com/files/Manuals/BT_Module_Manual.pdf), document version 1.1
 
-The EMU Classic's serial port speaks **RS-232 voltage levels** — nominally
-±5 to ±15 V, idling *negative*. An ESP32-S3 GPIO is a 3.3 V input and would be
-destroyed by that directly. A MAX3232 converts between the two.
+## The link: EMU Classic extension port → MAX3232 → ESP32-S3
 
-Because the dashboard only ever listens, just one of the MAX3232's two
-receivers is used. Both of its drivers stay unconnected.
+The dashboard **replaces the Ecumaster BT Module** and plugs into the same
+place: the EMU Classic's extension port. That port carries the ECU's serial
+output and its own supply.
+
+The port speaks **RS-232 voltage levels** — nominally ±5 to ±15 V, idling
+*negative*. An ESP32-S3 GPIO is a 3.3 V input and would be destroyed by that
+directly, so a MAX3232 converts between the two.
 
 ```
   EMU Classic                MAX3232                    ESP32-S3
-  serial TX  ──RS-232──▶  R1IN ──▶ R1OUT  ──3.3 V TTL──▶  GPIO18   (UART1 RX)
+  extension port
 
-                          VCC ◀── 3.3 V from the CrowPanel
-                          GND ◀── common with ECU ground and dash ground
+  serial out ───RS-232──▶  R1IN ───▶ R1OUT ──3.3 V TTL──▶  GPIO18  (UART1 RX)
+                           T1OUT ◀── T1IN  ◀──────────────  GPIO17  (UART1 TX)
 
-  (nothing)               T1IN / T1OUT unused — the dash never transmits
+  3.3 V  ─────────────────▶ VCC          ← the ECU powers the level shifter
+  GND    ─────────────────▶ GND  ─────────────────────────  dash ground
+  +5 V   ── DO NOT CONNECT
 ```
 
-### The one detail that matters: power the MAX3232 from 3.3 V
+### Supply: 3.3 V from the ECU, never 5 V
 
-The MAX3232 is a 3 V–5.5 V part, and its TTL-side output swings to whatever
-**VCC** you give it. Powered from 5 V it will drive R1OUT to 5 V, straight
-into a 3.3 V GPIO.
+The MAX3232 takes its power from the extension port, not from the panel. The
+BT Module manual is explicit about that port, and the warning transfers
+directly to anything else plugged into it:
 
-**Take VCC from a 3.3 V rail, not 5 V.** This is the single easiest way to
-kill the board, and it is not obvious, because the chip works fine on 5 V —
-it is the ESP32 that does not survive it.
+> The module is designed to operate at 3.3 V supply voltage only.
+> Pin 5 (+5 V) must not be used.
+> Applying 5 V may result in permanent damage to the device.
+
+Two things follow, and both are easy to get wrong:
+
+- **Leave the +5 V pin unconnected.** It is present on the port and it is not
+  the supply.
+- **Do not tie the ECU's 3.3 V to the panel's 3.3 V.** The MAX3232 is powered
+  from one rail only — the ECU's. Bridging two independently regulated 3.3 V
+  rails invites current to flow between them. **Only the grounds are common**,
+  and they must be, or RS-232 signalling has no reference.
+
+The MAX3232's TTL-side output swings to whatever VCC it is given, which is why
+the supply voltage decides whether the ESP32 survives: from 3.3 V it drives a
+3.3 V logic level into GPIO18, which is correct.
+
+One consequence of powering from the ECU: with the ignition off the level
+shifter is unpowered even if the dash is running on USB. The dash simply reads
+`OFFLINE`, which is the honest state.
+
+### The TX line
+
+GPIO17 is wired through to the port and assigned in `board_config.hpp`,
+because that is the configuration the link was actually verified with.
+
+**It is never driven.** No code in this project writes to the ECU port — the
+provider and the adapter are the only files that touch it, and neither calls
+`write()`. The manual also describes the port as one-way:
+
+> Data transmission: One-way (ECU → external device)
+
+So the TX line is present but idle. If you ever want the hardware guarantee
+back instead of the software one, set `board::kEcuTxPin` to `-1` and the pin
+is never attached to the UART at all.
 
 ### Practical notes
 
@@ -38,18 +76,15 @@ it is the ESP32 that does not survive it.
   the pin going to the ECU must be an *RS-232 input* (R1IN), and the pin going
   to GPIO18 must be a *TTL output* (R1OUT). If you get no data, this is the
   first thing to swap.
-- **Grounds must be common** between the ECU, the MAX3232 and the dash.
-  Without a shared reference, RS-232 signalling is meaningless.
 - **No inversion is needed in software.** RS-232 idles low-true; the MAX3232
   receiver hands the UART a normal idle-high TTL stream, so `SERIAL_8N1` is
   correct as-is.
 - **Charge-pump capacitors.** The MAX3232 generates its ±RS-232 rails
   internally and needs four external capacitors (typically 100 nF) on C1±,
   C2±, V+ and V−. Ready-made modules already have them; a bare chip does not.
-- **Do not wire the dash side of the link back to the ECU.** The firmware
-  leaves UART1's TX pin unassigned on purpose (`board::kEcuTxPin = -1`), so
-  even a software mistake cannot transmit — but only if the wire is absent
-  too.
+- **Enable the stream in the ECU.** The EMU Classic Client has to have the
+  *ECUMASTER serial protocol* switched on, then the change made permanent
+  ("Make permanent" on the toolbar). Without it the port stays quiet.
 
 ### Link parameters
 
@@ -57,15 +92,20 @@ it is the ESP32 that does not survive it.
 |---|---|
 | Baud | 19200 |
 | Framing | 8N1 |
-| Direction | ECU → dash only |
-| Dash input | GPIO18 (UART1-OUT connector RX) |
+| Direction | ECU → dash. The dash never transmits. |
+| Dash RX | GPIO18 (UART1-OUT connector RX) |
+| Dash TX | GPIO17 — wired and assigned, never driven |
+| Level shifter supply | 3.3 V from the EMU extension port |
 
-### To fill in
+### To fill in: extension port pin numbering
 
-The exact EMU Classic terminal that carries the serial output is not recorded
-here yet — add it from the loom. Note also that `rev16` of the schematic shows
-a **Bluetooth module** block; if that module is connected to the same serial
-port, check whether the port can drive both or whether the dash replaces it.
+The manual states the supply rule in text but gives the pin numbering only in
+a figure, which could not be read from the PDF as text. **Pin 5 is +5 V and
+must not be used** — that much is written out. The pins carrying 3.3 V, ground
+and the serial lines have to be read off the manual's connector drawing before
+anything is soldered.
+
+Record them here once confirmed.
 
 ## ECU sensor inputs (EMU Classic connector B)
 

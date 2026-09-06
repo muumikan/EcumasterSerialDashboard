@@ -51,14 +51,39 @@ displaying nothing, so those channels are absent from every page. This is a
 per-car decision, which is why it is recorded here rather than inferred from
 the code.
 
-## The ECU link has no TX pin at all
+## The dashboard replaces the Ecumaster BT Module
 
-`board::kEcuTxPin` is `-1`, so `HardwareSerial::begin()` never attaches a
-transmit pin to UART1.
+The car's schematic showed a Bluetooth module on the EMU Classic's extension
+port. The dashboard takes that place rather than sharing the port, which
+settles what it plugs into and where its level shifter is powered from.
 
-The project rule is that communication is read-only. Enforcing it only in
-software would leave one careless `write()` between the dashboard and a
-running engine's ECU. With no pin attached, that call goes nowhere.
+The BT Module manual then decides the electrical detail: that port supplies
+**3.3 V**, it also exposes a +5 V pin that "must not be used", and 5 V "may
+result in permanent damage". The MAX3232 is therefore powered from the ECU at
+3.3 V, and the panel's own 3.3 V rail is not bridged to it — only grounds are
+common. See [../wiring/signal-list.md](../wiring/signal-list.md).
+
+The manual also confirms the stream's shape: *"Data transmission: One-way
+(ECU → external device)"*.
+
+## The ECU TX line is wired, and read-only is enforced in software
+
+This reverses an earlier decision. `board::kEcuTxPin` was `-1` so that
+`HardwareSerial::begin()` never attached a transmit pin, making a stray
+`write()` physically harmless.
+
+It is now GPIO17, because that is the wiring and the configuration the link
+was actually verified working with. Changing the pinout at the same time as
+everything else would have meant debugging two things at once if the first
+flash had stayed silent.
+
+The read-only guarantee is therefore a software one: the provider and the
+adapter are the only files that touch the ECU port, and neither ever calls
+`write()` or any other transmitting method. The port being one-way by design
+means nothing is listening anyway.
+
+If the hardware guarantee is wanted back, setting `kEcuTxPin` to `-1` restores
+it in one line — the pin is assigned but never driven either way.
 
 ## ECU RX moved from GPIO16 to GPIO18
 
@@ -99,15 +124,22 @@ implementation is the specification available.
   Not readable from the schematic — the wire routing has no text. Harmless for
   the firmware provided both channels are assigned in the EMU software; if
   they are not, the values arrive only as raw volts on `analogIn1..4`.
-- **The EMU terminal that carries serial TX** is not recorded in
-  `wiring/signal-list.md` yet.
-- **A Bluetooth module appears in schematic rev16.** If it shares the serial
-  port, decide whether the port drives both or the dash replaces it.
+- **Extension port pin numbering.** The BT Module manual gives the supply
+  rule in text but the pin numbers only in a figure, which could not be read
+  out of the PDF. Pin 5 is +5 V and must not be used; the 3.3 V, ground and
+  serial pins still have to be read off the manual's drawing and recorded in
+  `wiring/signal-list.md` before anything is soldered.
+- **The ECUMASTER serial protocol must be enabled** in the EMU Classic Client
+  and made permanent, or the port stays quiet.
 - **Not yet run against the car.** The firmware compiles and the layout is
   fixed at 480 × 320, but nothing has been verified on the bench. Two things
   to watch on the first flash: whether the LVGL object pool is large enough
   (`LV_MEM_SIZE`, currently 96 kB), and whether swipe gestures bubble
   correctly when the touch lands on a tile rather than the background.
+- **Enclosure dimensions are not verified.** `enclosure/case.scad` is
+  parametric and its geometry is right, but the measurements at the top of the
+  file are placeholders. They must be taken from Elecrow's STEP model or the
+  physical panel before printing.
 - **Fonts.** LVGL's built-in Montserrat is not condensed and stops at 48 px,
   so the RPM readout is smaller than the mockup's. `λ` and `Δ` are outside its
   character set, so the UI uses `LAMBDA`, `DFPR` and `C` instead of `°C`. A

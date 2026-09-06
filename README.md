@@ -4,8 +4,8 @@ A digital dashboard for a Toyota Carina with a 1G-GTE running an Ecumaster
 EMU Classic. An ESP32-S3 reads the ECU's serial data stream and renders it on
 a 3.5" touch panel.
 
-**The link is read-only.** Nothing is ever written back to the ECU — not by
-the firmware, and not by the wiring: no TX pin is attached to the UART at all.
+**The link is read-only.** Nothing in the firmware writes to the ECU port,
+and the ECU's extension port is a one-way stream in the first place.
 
 ## Hardware
 
@@ -17,10 +17,13 @@ the firmware, and not by the wiring: no TX pin is attached to the UART at all.
 | Level shifter | MAX3232 (RS-232 ↔ 3.3 V TTL) |
 | ECU | Ecumaster EMU Classic, firmware 1.211 |
 | Link | 19200 baud, 8N1, one direction only |
+| ECU port | EMU Classic extension port (replaces the BT Module) |
 
-The ECU speaks RS-232 voltage levels, which would destroy an ESP32 GPIO, so a
-MAX3232 sits between them. See [wiring/signal-list.md](wiring/signal-list.md)
-— it has one supply-voltage detail that matters.
+The dashboard replaces the Ecumaster BT Module on the EMU Classic's extension
+port. That port speaks RS-232 voltage levels, which would destroy an ESP32
+GPIO, so a MAX3232 sits between them — powered from the ECU at 3.3 V, never
+5 V. See [wiring/signal-list.md](wiring/signal-list.md); the supply rule there
+is the one that decides whether the board survives.
 
 ## What it shows
 
