@@ -2,151 +2,152 @@
 
 #include <stdio.h>
 
+#include "dash_theme.hpp"
+
 namespace ecu {
 namespace {
 
-constexpr lv_coord_t kTopBarHeight = 34;
-constexpr lv_coord_t kRpmBlockHeight = 96;
+constexpr lv_coord_t kHeroHeight = 156;
+constexpr lv_coord_t kRpmBoxWidth = 290;
+constexpr lv_coord_t kMapBoxWidth = 190;
+constexpr lv_coord_t kTileWidth = 120;
+constexpr lv_coord_t kTileHeight = 130;
 
-lv_color_t linkColor(LinkState state) {
-    switch (state) {
-        case LinkState::Online:  return lv_palette_main(LV_PALETTE_GREEN);
-        case LinkState::Stale:   return lv_palette_main(LV_PALETTE_AMBER);
-        case LinkState::Offline: return lv_palette_main(LV_PALETTE_RED);
-    }
-    return lv_palette_main(LV_PALETTE_GREY);
-}
+// Boost bar scale: -1.0 bar (full vacuum) to +1.2 bar, so atmospheric sits
+// just under half way across.
+constexpr lv_coord_t kBarWidth = 162;
+constexpr lv_coord_t kBarHeight = 10;
+constexpr float kBarMin = -1.0f;
+constexpr float kBarMax = 1.2f;
 
-// A flat, borderless container - the dashboard is built entirely from these.
-lv_obj_t* makePanel(lv_obj_t* parent, lv_coord_t w, lv_coord_t h) {
-    lv_obj_t* panel = lv_obj_create(parent);
-    lv_obj_set_size(panel, w, h);
-    lv_obj_set_style_border_width(panel, 0, 0);
-    lv_obj_set_style_radius(panel, 0, 0);
-    lv_obj_set_style_pad_all(panel, 0, 0);
-    lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
-    return panel;
-}
-
-// One measurement: small caption on top, value underneath.
-lv_obj_t* makeTile(lv_obj_t* parent, const char* caption, const char* unit) {
-    lv_obj_t* tile = makePanel(parent, 116, 90);
-    lv_obj_set_style_pad_all(tile, 6, 0);
-    lv_obj_set_style_bg_color(tile, lv_color_hex(0x1b1b1b), 0);
-    lv_obj_set_style_radius(tile, 6, 0);
-
-    lv_obj_t* caption_label = lv_label_create(tile);
-    lv_label_set_text(caption_label, caption);
-    lv_obj_set_style_text_color(caption_label, lv_palette_main(LV_PALETTE_GREY), 0);
-    lv_obj_align(caption_label, LV_ALIGN_TOP_LEFT, 0, 0);
-
-    lv_obj_t* unit_label = lv_label_create(tile);
-    lv_label_set_text(unit_label, unit);
-    lv_obj_set_style_text_color(unit_label, lv_palette_main(LV_PALETTE_GREY), 0);
-    lv_obj_align(unit_label, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-
-    lv_obj_t* value_label = lv_label_create(tile);
-    lv_label_set_text(value_label, "--");
-    lv_obj_set_style_text_font(value_label, &lv_font_montserrat_28, 0);
-    lv_obj_align(value_label, LV_ALIGN_BOTTOM_LEFT, 0, 0);
-
-    return value_label;
-}
-
-void setInt(lv_obj_t* label, int value) {
-    char text[16];
-    snprintf(text, sizeof(text), "%d", value);
-    lv_label_set_text(label, text);
-}
-
-void setFloat(lv_obj_t* label, float value, int decimals) {
-    char text[16];
-    snprintf(text, sizeof(text), "%.*f", decimals, value);
-    lv_label_set_text(label, text);
+lv_coord_t barX(float bar) {
+    if (bar < kBarMin) bar = kBarMin;
+    if (bar > kBarMax) bar = kBarMax;
+    return static_cast<lv_coord_t>(((bar - kBarMin) / (kBarMax - kBarMin)) * kBarWidth);
 }
 
 }  // namespace
 
-void MainScreen::create() {
-    lv_obj_t* screen = lv_scr_act();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0x0c0c0c), 0);
-    lv_obj_set_style_pad_all(screen, 0, 0);
-    lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
+void MainScreen::create(lv_obj_t* parent) {
+    root_ = makePanel(parent, 0, 0, theme::kPageWidth, theme::kPageHeight);
 
-    // --- top bar ---------------------------------------------------------
-    lv_obj_t* topBar = makePanel(screen, LV_PCT(100), kTopBarHeight);
-    lv_obj_set_style_bg_color(topBar, lv_color_hex(0x161616), 0);
-    lv_obj_set_style_pad_hor(topBar, 10, 0);
-    lv_obj_align(topBar, LV_ALIGN_TOP_MID, 0, 0);
+    // ---- RPM ------------------------------------------------------------
+    lv_obj_t* rpmBox = makePanel(root_, 0, 0, kRpmBoxWidth, kHeroHeight);
+    lv_obj_set_style_pad_all(rpmBox, 12, 0);
 
-    lv_obj_t* title = lv_label_create(topBar);
-    lv_label_set_text(title, "EMU CLASSIC");
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_GREY), 0);
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_t* rpmCaption = makeCaption(rpmBox, "RPM");
+    lv_obj_align(rpmCaption, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    linkLabel_ = lv_label_create(topBar);
-    lv_label_set_text(linkLabel_, "OFFLINE");
-    lv_obj_align(linkLabel_, LV_ALIGN_RIGHT_MID, 0, 0);
+    rpmValue_ = lv_label_create(rpmBox);
+    lv_label_set_text(rpmValue_, "0");
+    lv_obj_set_style_text_font(rpmValue_, &lv_font_montserrat_48, 0);
+    lv_obj_align(rpmValue_, LV_ALIGN_LEFT_MID, 0, 4);
 
-    // --- rpm -------------------------------------------------------------
-    lv_obj_t* rpmBlock = makePanel(screen, LV_PCT(100), kRpmBlockHeight);
-    lv_obj_set_style_bg_opa(rpmBlock, LV_OPA_TRANSP, 0);
-    lv_obj_align(rpmBlock, LV_ALIGN_TOP_MID, 0, kTopBarHeight);
+    lv_obj_t* rpmTrack = makePanel(rpmBox, 0, kHeroHeight - 12 - 12 - 7, kRpmBoxWidth - 24, 7);
+    lv_obj_set_style_bg_color(rpmTrack, theme::track(), 0);
+    lv_obj_set_style_bg_opa(rpmTrack, LV_OPA_COVER, 0);
 
-    rpmLabel_ = lv_label_create(rpmBlock);
-    lv_label_set_text(rpmLabel_, "----");
-    lv_obj_set_style_text_font(rpmLabel_, &lv_font_montserrat_48, 0);
-    lv_obj_align(rpmLabel_, LV_ALIGN_CENTER, 0, -6);
+    rpmBar_ = makePanel(rpmTrack, 0, 0, 0, 7);
+    lv_obj_set_style_bg_color(rpmBar_, theme::cyan(), 0);
+    lv_obj_set_style_bg_opa(rpmBar_, LV_OPA_COVER, 0);
 
-    lv_obj_t* rpmUnit = lv_label_create(rpmBlock);
-    lv_label_set_text(rpmUnit, "RPM");
-    lv_obj_set_style_text_color(rpmUnit, lv_palette_main(LV_PALETTE_GREY), 0);
-    lv_obj_align(rpmUnit, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // ---- boost ----------------------------------------------------------
+    lv_obj_t* mapBox = makePanel(root_, kRpmBoxWidth, 0, kMapBoxWidth, kHeroHeight);
+    lv_obj_set_style_pad_all(mapBox, 12, 0);
+    lv_obj_set_style_border_color(mapBox, theme::line(), 0);
+    lv_obj_set_style_border_width(mapBox, 1, 0);
+    lv_obj_set_style_border_side(mapBox, LV_BORDER_SIDE_LEFT, 0);
 
-    // --- measurement grid ------------------------------------------------
-    lv_obj_t* grid = makePanel(screen, LV_PCT(100), 190);
-    lv_obj_set_style_bg_opa(grid, LV_OPA_TRANSP, 0);
-    lv_obj_align(grid, LV_ALIGN_TOP_MID, 0, kTopBarHeight + kRpmBlockHeight);
-    lv_obj_set_flex_flow(grid, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_flex_align(grid, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(grid, 5, 0);
-    lv_obj_set_style_pad_column(grid, 5, 0);
+    lv_obj_t* boostCaption = makeCaption(mapBox, "BOOST");
+    lv_obj_align(boostCaption, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    tileValues_[kMap] = makeTile(grid, "MAP", "kPa");
-    tileValues_[kTps] = makeTile(grid, "TPS", "%");
-    tileValues_[kClt] = makeTile(grid, "CLT", "C");
-    tileValues_[kIat] = makeTile(grid, "IAT", "C");
-    tileValues_[kBattery] = makeTile(grid, "BATT", "V");
-    tileValues_[kLambda] = makeTile(grid, "LAMBDA", "");
-    tileValues_[kOilPressure] = makeTile(grid, "OIL P", "bar");
-    tileValues_[kOilTemp] = makeTile(grid, "OIL T", "C");
+    boostValue_ = lv_label_create(mapBox);
+    lv_label_set_text(boostValue_, "+0.00");
+    lv_obj_set_style_text_font(boostValue_, &lv_font_montserrat_28, 0);
+    lv_obj_align(boostValue_, LV_ALIGN_TOP_LEFT, 0, 22);
+
+    mapLabel_ = makeCaption(mapBox, "bar  MAP 0 kPa");
+    lv_obj_align(mapLabel_, LV_ALIGN_TOP_LEFT, 0, 58);
+
+    lv_obj_t* boostTrack = makePanel(mapBox, 0, 82, kBarWidth, kBarHeight);
+    lv_obj_set_style_bg_color(boostTrack, theme::track(), 0);
+    lv_obj_set_style_bg_opa(boostTrack, LV_OPA_COVER, 0);
+
+    boostFill_ = makePanel(boostTrack, barX(0.0f), 0, 0, kBarHeight);
+    lv_obj_set_style_bg_color(boostFill_, theme::cyan(), 0);
+    lv_obj_set_style_bg_opa(boostFill_, LV_OPA_COVER, 0);
+
+    lv_obj_t* zeroMark = makePanel(boostTrack, barX(0.0f), 0, 1, kBarHeight);
+    lv_obj_set_style_bg_color(zeroMark, theme::dim(), 0);
+    lv_obj_set_style_bg_opa(zeroMark, LV_OPA_COVER, 0);
+
+    boostPeakMark_ = makePanel(boostTrack, barX(0.0f), 0, 2, kBarHeight);
+    lv_obj_set_style_bg_color(boostPeakMark_, theme::warn(), 0);
+    lv_obj_set_style_bg_opa(boostPeakMark_, LV_OPA_COVER, 0);
+
+    boostPeakLabel_ = makeCaption(mapBox, "Peak --");
+    lv_obj_align(boostPeakLabel_, LV_ALIGN_TOP_LEFT, 0, 102);
+
+    // ---- tiles ----------------------------------------------------------
+    const lv_coord_t y = kHeroHeight;
+    clt_.create(root_, 0, y, kTileWidth, kTileHeight, "CLT", "C", &lv_font_montserrat_28);
+    oil_.create(root_, kTileWidth, y, kTileWidth, kTileHeight, "OIL P", "bar", &lv_font_montserrat_28);
+    lambda_.create(root_, kTileWidth * 2, y, kTileWidth, kTileHeight, "LAMBDA", "", &lv_font_montserrat_28);
+    battery_.create(root_, kTileWidth * 3, y, kTileWidth, kTileHeight, "BATT", "V", &lv_font_montserrat_28);
 }
 
-void MainScreen::update(const EngineDataModel& model, uint32_t nowMs) {
-    const LinkState state = model.linkState(nowMs);
-
-    if (state != lastState_) {
-        lastState_ = state;
-        lv_label_set_text(linkLabel_, toString(state));
-        lv_obj_set_style_text_color(linkLabel_, linkColor(state), 0);
-    }
-
-    if (model.revision() == lastRevision_) {
-        return;
-    }
-    lastRevision_ = model.revision();
-
+void MainScreen::update(const EngineDataModel& model,
+                        const AlarmEngine& alarms,
+                        const RunPeaks& peaks,
+                        uint32_t nowMs) {
+    (void)peaks;
+    (void)nowMs;
     const EngineSnapshot& s = model.snapshot();
 
-    setInt(rpmLabel_, s.rpm);
-    setInt(tileValues_[kMap], s.mapKpa);
-    setInt(tileValues_[kTps], s.tpsPct);
-    setInt(tileValues_[kClt], s.cltC);
-    setInt(tileValues_[kIat], s.iatC);
-    setFloat(tileValues_[kBattery], s.batteryV, 1);
-    setFloat(tileValues_[kLambda], s.wboLambda, 2);
-    setFloat(tileValues_[kOilPressure], s.oilPressureBar, 1);
-    setInt(tileValues_[kOilTemp], s.oilTempC);
+    char text[24];
+
+    snprintf(text, sizeof(text), "%u", static_cast<unsigned>(s.rpm));
+    lv_label_set_text(rpmValue_, text);
+
+    lv_coord_t rpmWidth = static_cast<lv_coord_t>((s.rpm / 7500.0f) * (kRpmBoxWidth - 24));
+    if (rpmWidth < 0) rpmWidth = 0;
+    if (rpmWidth > kRpmBoxWidth - 24) rpmWidth = kRpmBoxWidth - 24;
+    lv_obj_set_width(rpmBar_, rpmWidth);
+
+    const float boost = (static_cast<float>(s.mapKpa) - 100.0f) / 100.0f;
+    snprintf(text, sizeof(text), "%+.2f", boost);
+    lv_label_set_text(boostValue_, text);
+
+    snprintf(text, sizeof(text), "bar  MAP %u kPa", static_cast<unsigned>(s.mapKpa));
+    lv_label_set_text(mapLabel_, text);
+
+    const lv_coord_t zero = barX(0.0f);
+    const lv_coord_t now = barX(boost);
+    if (now >= zero) {
+        lv_obj_set_pos(boostFill_, zero, 0);
+        lv_obj_set_width(boostFill_, now - zero);
+    } else {
+        lv_obj_set_pos(boostFill_, now, 0);
+        lv_obj_set_width(boostFill_, zero - now);
+    }
+    lv_obj_set_style_bg_color(boostFill_, boost > 1.05f ? theme::warn() : theme::cyan(), 0);
+
+    if (alarms.engineRunning() && boost > boostPeak_) {
+        boostPeak_ = boost;
+        lv_obj_set_pos(boostPeakMark_, barX(boostPeak_), 0);
+        snprintf(text, sizeof(text), "Peak %+.2f bar", boostPeak_);
+        lv_label_set_text(boostPeakLabel_, text);
+    }
+
+    clt_.setInt(s.cltC);
+    oil_.setFloat(s.oilPressureBar, 1);
+    lambda_.setFloat(s.wboLambda, 2);
+    battery_.setFloat(s.batteryV, 1);
+
+    clt_.setSeverity(alarms.severity(AlarmId::Coolant));
+    oil_.setSeverity(alarms.severity(AlarmId::OilPressure));
+    lambda_.setSeverity(alarms.severity(AlarmId::Lean));
+    battery_.setSeverity(alarms.severity(AlarmId::Battery));
 }
 
 }  // namespace ecu

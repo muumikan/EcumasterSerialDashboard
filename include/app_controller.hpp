@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 
+#include "dash_ui.hpp"
 #include "ecu_data_provider.hpp"
 #include "engine_data_model.hpp"
-#include "main_screen.hpp"
 #include "serial_report.hpp"
 
 namespace ecu {
@@ -25,7 +25,7 @@ private:
     EngineDataModel model_;
     EcuDataProvider provider_;
     SerialReport report_;
-    MainScreen screen_;
+    DashUi ui_;
     bool displayReady_ = false;
 };
 

@@ -1,5 +1,7 @@
 #include "app_controller.hpp"
 
+#include <lvgl.h>
+
 #include "board_config.hpp"
 #include "display.hpp"
 
@@ -18,7 +20,7 @@ void AppController::begin() {
 
     displayReady_ = display::begin();
     if (displayReady_) {
-        screen_.create();
+        ui_.begin(lv_scr_act());
     } else {
         Serial.println(F("display: LVGL buffer allocation failed, running headless"));
     }
@@ -33,7 +35,7 @@ void AppController::loop() {
     provider_.loop(nowMs);
 
     if (displayReady_) {
-        screen_.update(model_, nowMs);
+        ui_.update(model_, nowMs);
         display::loop();
     }
 
