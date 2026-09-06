@@ -5,10 +5,11 @@
 namespace ecu {
 
 EcuDataProvider::EcuDataProvider(HardwareSerial& uart, EngineDataModel& model)
-    : uart_(uart), model_(model), adapter_(uart) {}
+    : uart_(uart), model_(model), log_(), tap_(uart, log_), adapter_(tap_) {}
 
 void EcuDataProvider::begin() {
     begin(board::kEcuBaud, board::kEcuRxPin, board::kEcuTxPin);
+    log_.begin();
 }
 
 void EcuDataProvider::begin(uint32_t baud, int8_t rxPin, int8_t txPin) {
@@ -20,7 +21,12 @@ void EcuDataProvider::begin(uint32_t baud, int8_t rxPin, int8_t txPin) {
 // print() or any other transmitting method on it.
 
 void EcuDataProvider::loop(uint32_t nowMs) {
-    if (adapter_.poll() == 0) {
+    const uint32_t consumed = adapter_.poll();
+
+    // Flush regardless, so a paused stream still commits what was buffered.
+    log_.loop(nowMs);
+
+    if (consumed == 0) {
         return;  // nothing arrived; leave the model's timestamps alone
     }
 
