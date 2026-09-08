@@ -50,11 +50,15 @@ void DashUi::begin(lv_obj_t* screen) {
 
     setup_.bind(&settings_, settingsChangedCb, this);
 
+    // The alarm list sits between the gauges and the diagnostics: close enough
+    // to reach from DRIVE in three swipes, far enough not to be landed on by
+    // accident while driving.
     pages_[0] = &drive_;
     pages_[1] = &tune_;
     pages_[2] = &temps_;
-    pages_[3] = &diagnostics_;
-    pages_[4] = &setup_;
+    pages_[3] = &alarmList_;
+    pages_[4] = &diagnostics_;
+    pages_[5] = &setup_;
 
     rtc_.begin();
 
@@ -117,7 +121,7 @@ void DashUi::buildChrome(lv_obj_t* screen) {
 
     pageName_ = lv_label_create(status);
     lv_label_set_text(pageName_, "DRIVE");
-    lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, 58, 0);
+    lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, 70, 0);
 
     alarmText_ = lv_label_create(status);
     lv_label_set_text(alarmText_, "");
@@ -357,7 +361,7 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
 
     // Counts events, not conditions: the badge is there to say "something
     // happened, go and look", and it has to keep saying so after the condition
-    // has cleared.
+    // has cleared. The Alarms page is where the detail lives.
     const uint32_t events = alarms_.events().total();
     if (events != lastEventTotal_) {
         lastEventTotal_ = events;
@@ -388,7 +392,7 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
 
     // Evaluated on a link change as well as on new data: losing the link is
     // exactly the case where no new data is coming, and it is an event the
-    // log has to record.
+    // list has to record.
     if (changed || link != lastLink_) {
         lastRevision_ = model.revision();
         alarms_.evaluate(model.snapshot(), link, rtc_.now(), nowMs);
@@ -411,8 +415,8 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     // is the one where data has stopped arriving.
     updateSummary(link);
 
-    // The clock read is in the condition so the status bar keeps ticking even
-    // when the ECU has gone quiet.
+    // The clock read is in the condition so the status bar and the alarm list's
+    // running durations tick along even when the ECU has gone quiet.
     if (changed || lastLink_ != link || clockRead) {
         updateStatusBar(model, nowMs);
         pages_[page_]->update(model, alarms_, peaks_, nowMs);

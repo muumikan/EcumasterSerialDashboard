@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "alarm_engine.hpp"
+#include "alarms_screen.hpp"
 #include "dash_page.hpp"
 #include "diagnostic_screen.hpp"
 #include "engine_data_model.hpp"
@@ -45,7 +46,7 @@ public:
     void settingsChanged();
 
 private:
-    static constexpr uint8_t kPageCount = 5;
+    static constexpr uint8_t kPageCount = 6;
     static constexpr uint8_t kShiftSegments = 14;
 
     void buildChrome(lv_obj_t* screen);
@@ -60,6 +61,7 @@ private:
     MainScreen drive_;
     TuneScreen tune_;
     TempsScreen temps_;
+    AlarmsScreen alarmList_;
     DiagnosticScreen diagnostics_;
     SetupScreen setup_;
     DashPage* pages_[kPageCount] = {};
