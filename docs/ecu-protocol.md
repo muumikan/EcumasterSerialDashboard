@@ -117,6 +117,32 @@ that reports valid frames, not a change in the model.
 [../wiring/signal-list.md](../wiring/signal-list.md) for which sensors are
 actually fitted and which channels are therefore meaningless.
 
-The `cel` word is a 16-bit fault bitfield. **The bit-to-fault mapping is not
-in the reference implementation**, so the diagnostics page shows the raw word
-and 16 numbered bits rather than inventing names for them.
+## Check-engine bits
+
+The `cel` word is a 16-bit fault bitfield, and Ecumaster names the bits. The
+mapping is not in the EMUSerial reference implementation - which is why the
+diagnostics page showed bare numbers at first - but it is in Ecumaster's own
+format definition, [ecu-formats/version1_211.xml](ecu-formats/version1_211.xml),
+as `<paramlist name="checkEngine" bitfield="1">`:
+
+| Bit | Flag | Bit | Flag |
+|---|---|---|---|
+| 0 | CLT | 6 | EGT ALARM |
+| 1 | IAT | 7 | KNOCK |
+| 2 | MAP | 8 | FF SENSOR |
+| 3 | WBO | 9 | DBW |
+| 4 | EGT1 | 10 | FPR |
+| 5 | EGT2 | | |
+
+**One inference sits in that table.** The paramlist numbers its entries from 1,
+and this maps entry N to bit N-1. The file never says so outright, but it is
+the only reading that works: `fuelCorrections` in the same file has sixteen
+entries for a sixteen-bit word, so its last entry, value 16, has to mean bit
+15. Every other bitfield list in the file fits the same way.
+
+Confirm it on the car rather than trusting it: unplug the intake air
+temperature sensor and IAT should be the flag that lights. If the flag one
+place along lights instead, the table is off by one.
+
+Bits 11 to 15 have no name in the 1.211 definition. The diagnostics page shows
+the raw word alongside the flags, so a bit outside the table is still visible.

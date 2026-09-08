@@ -98,14 +98,22 @@ Gating on the engine actually turning is simpler and more honest than
 special-casing each rule, and it makes the intent obvious in one constant:
 `kEngineRunningRpm`.
 
-## CEL bits are shown as numbers, not names
+## CEL bits are named, once a source for the names existed
 
 The 16-bit `cel` word is decoded by the reference implementation, but the
-meaning of each bit is not documented there. A mockup of the diagnostics page
-carried plausible labels — CLT, IAT, TPS and so on — and those were invented.
+meaning of each bit is not documented there. An early mockup carried plausible
+labels — CLT, IAT, TPS and so on — and those were invented, so the page shipped
+with bare numbered bits instead.
 
-The page now shows the raw hex word and 16 numbered bit indicators. Names can
-be filled in once they are confirmed against the EMU software, and not before.
+The names turned up later in Ecumaster's own format definition, in the 1.211
+XML that came off a USB stick, as `<paramlist name="checkEngine">`. Five of the
+invented labels happened to be right and three were not, which is roughly what
+guessing is worth.
+
+The page now names the eleven defined bits. One inference remains — that the
+list's entry N is bit N-1 — and it is written down in
+[ecu-protocol.md](ecu-protocol.md#check-engine-bits) with the field-width
+argument for it and a way to check it on the car.
 
 ## Unwired channels appear nowhere
 
