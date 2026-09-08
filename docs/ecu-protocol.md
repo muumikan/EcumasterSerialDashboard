@@ -61,6 +61,44 @@ than corrupting neighbouring fields.
 The tables in this repository are format version 1.200, generated from
 `extras/version1_200.xml`. The car runs EMU Classic firmware 1.211.
 
+## Version mismatch: channel 33
+
+Those two versions disagree about exactly one channel, and the dashboard is on
+the wrong side of it.
+
+1.200 has a defect: `pulseWidth` **and** `scondarypulseWidth` are both declared
+on channel 7. The decoder scans the channel table and takes the first match, so
+`scondarypulseWidth` never receives anything and sits at zero for ever.
+
+1.211 fixes that by moving `scondarypulseWidth` to channel 33 — and drops
+`afrTarget`, which held channel 33 in 1.200, from the transmitted set. It is
+still in the XML, just without a `channel` attribute.
+
+So channel 33 means two different things:
+
+| | channel 33 |
+|---|---|
+| What the ECU sends (firmware 1.211) | `scondarypulseWidth`, word, ÷62, ms |
+| What this firmware decodes (tables 1.200) | `afrTarget`, unsigned byte, ÷10, AFR |
+
+`emu_data.afrTarget` therefore holds the low byte of a secondary injector pulse
+width divided by ten. It is meaningless.
+
+**Nothing displays it today**, so nothing on screen is currently wrong. The
+Tune page's target comes from `lambdaTarget` on channel 32, which is identical
+in both versions. `injPulseWidth2Ms` is not displayed either, and would read
+zero regardless.
+
+It is a trap rather than a live fault: the value is wrong and looks plausible,
+and would start lying the moment someone puts it on a page.
+
+Adopting 1.211 removes `afrTarget` from the struct, which makes the compiler
+flag the one place it is read. AFR target is derivable anyway — lambda target
+times 14.7 for petrol. See [ecu-formats/](ecu-formats/).
+
+Nothing else differs. Channels 1-32 and 255 are identical in both versions, and
+1.211 adds no new channels at all.
+
 ## Liveness
 
 `EMUSerial::checkEmuSerial()` returns `void` and `decodeEmuFrame()` is

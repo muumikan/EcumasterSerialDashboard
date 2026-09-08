@@ -27,7 +27,7 @@ is the one that decides whether the board survives.
 
 ## What it shows
 
-Four pages, switched by swiping horizontally. Only channels that have a sensor
+Five pages, switched by swiping horizontally. Only channels that have a sensor
 actually fitted to the car appear anywhere; VSS and EGT are streamed by the
 ECU but not wired, so they are not displayed.
 
@@ -36,17 +36,35 @@ ECU but not wired, so they are not displayed.
 | **Drive** | RPM, boost with peak hold, CLT, oil pressure, lambda, battery |
 | **Tune** | Lambda vs. target, knock, ignition advance, injector PW and duty, MAP, TPS, RPM |
 | **Temps & press** | CLT, IAT, ECU temp, oil pressure, fuel pressure, ΔFPR |
-| **Diag** | Link state, frame age, update and revision counters, CEL word, run peaks |
+| **Diag** | Link state, frame age, counters, what latched, CEL word, run peaks |
+| **Setup** | Alarm limits and behaviour, shift points, brightness, logging |
 
 Above every page sit two always-on layers: a 6 px shift-light strip, lit from
-3 500 rpm and red from 6 800, and a status bar carrying the link state and the
+1 000 rpm and red from 6 000, and a status bar carrying the link state and the
 worst active alarm regardless of which page is up.
 
+The page changes only when you swipe it. There is no idle timeout returning to
+Drive: on the car it moved the screen out from under you while you were still
+reading it.
+
 An out-of-range value lights its own cell — amber for a warning, red for
-critical — rather than taking over the screen. A critical alarm also brings up
-the page that shows it, once, so swiping away is respected. Alarms are gated
-on RPM > 500: with the key on and the engine stopped, oil pressure reads 0 bar
-and battery voltage sits near 12.4 V, and neither is a fault.
+critical — and names itself in the status bar. Nothing but a swipe ever changes
+the page. Every trip is latched with the value and the RPM it happened at, so a
+half-second dip is still there when you stop.
+
+Alarms arm only after the engine has been running for a few seconds. Cranking
+crosses 500 rpm while oil pressure is still building and the battery is still
+down from the starter, and without the delay every start would fire two
+critical alarms. Thresholds carry a deadband so a value sitting on its limit
+does not flicker.
+
+Limits, the arming delay, the deadband, the shift points and the backlight are
+all editable on the Setup page and stored in flash — no laptop, no reflash. The
+page stays usable with the engine running, because setting a limit without
+watching the value it guards is guesswork.
+
+At power-up the dash opens on Drive and sweeps the shift lights, so every
+segment is confirmed working before the car moves.
 
 ## Building
 
@@ -87,7 +105,12 @@ shaped that way.
 
 ## Status
 
-Working: serial link, data model, alarm engine, all four pages, swipe
-navigation. Built and verified to compile; not yet run against the car.
+**Runs on the car.** First tested connected to the ECU on 8 September 2026:
+the link comes up, the pages behave, and the values read correctly as far as
+they have been checked. See [docs/test-results.md](docs/test-results.md).
+
+Working: serial link, data model, alarm engine, five pages, swipe navigation,
+settings in flash. SD logging exists on the `feature/sd-logging` branch and has
+not been tested yet.
 
 Open items are listed in [docs/decision-log.md](docs/decision-log.md).

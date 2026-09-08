@@ -84,6 +84,12 @@ CrowPanelLgfx gfx;
 
 // Two partial buffers in internal DMA-capable RAM. Full-screen buffers would
 // have to live in PSRAM, which flushes noticeably slower.
+// Backlight PWM. 5 kHz is well above anything the eye or a phone camera picks
+// up, and 8 bits is finer than the panel's usable range anyway.
+constexpr uint8_t kBacklightChannel = 0;
+constexpr uint32_t kBacklightFreqHz = 5000;
+constexpr uint8_t kBacklightBits = 8;
+
 constexpr uint32_t kBufferLines = 40;
 constexpr uint32_t kBufferPixels = board::kLcdWidth * kBufferLines;
 
@@ -125,8 +131,9 @@ bool begin() {
     gfx.fillScreen(TFT_BLACK);
 
     // Backlight on only after the panel is cleared, to avoid a flash of noise.
-    pinMode(board::kLcdBacklightPin, OUTPUT);
-    digitalWrite(board::kLcdBacklightPin, HIGH);
+    ledcSetup(kBacklightChannel, kBacklightFreqHz, kBacklightBits);
+    ledcAttachPin(board::kLcdBacklightPin, kBacklightChannel);
+    setBrightness(100);
 
     lv_init();
 
@@ -158,6 +165,14 @@ bool begin() {
 
 void loop() {
     lv_timer_handler();
+}
+
+void setBrightness(uint8_t percent) {
+    if (percent > 100) {
+        percent = 100;
+    }
+    const uint32_t duty = (static_cast<uint32_t>(percent) * 255u) / 100u;
+    ledcWrite(kBacklightChannel, duty);
 }
 
 }  // namespace display

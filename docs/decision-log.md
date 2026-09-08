@@ -4,22 +4,89 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
-## Alarms colour the cell; only critical ones move the page
+## Alarms colour the cell and name themselves; they never move the page
 
 An out-of-range value lights its own tile — amber for a warning, red for
-critical — and the status bar names the worst one on every page. A full-screen
-takeover was built first and then dropped: it hides everything else at exactly
-the moment the driver most wants context.
+critical — and the status bar names the worst one. The status bar is on screen
+whichever page is up, so the driver already sees it.
 
-Page switching is narrower still. A **critical** alarm requests the page that
-shows it, once, on its rising edge; the request is then consumed. A warning
-never moves the page.
+Two more aggressive designs were built and then removed. A full-screen takeover
+hid everything else at exactly the moment the driver most wants context. Pulling
+the page that owns the value was gentler but still bought nothing the status bar
+was not already showing, while taking the screen away from whatever the driver
+had deliberately chosen to look at.
 
-The reason is the failure mode of the obvious alternative. A dash that jumps
-whenever a condition is true fights the driver: coolant sitting at 101 °C up a
-long hill would drag the screen back every time they swiped away. Rising-edge
-plus consume means the dash speaks once and then respects the choice, and only
-speaks again if the condition clears and returns.
+What remains is the quiet version: colour where the value lives, one line of
+text that follows you across pages, and the page changes only when a thumb
+changes it.
+
+## The page changes only when a thumb changes it
+
+Two mechanisms used to move it on their own, and both are gone.
+
+A critical alarm used to pull up the page showing the value. It bought nothing
+the status bar was not already saying, and it took the screen away from
+whatever the driver had chosen.
+
+An idle timeout used to return to Drive after thirty seconds. On the car that
+turned out to be worse: it moved the screen out from under you while you were
+still reading a page you had deliberately opened. Manual is the whole rule now.
+
+## A run ends when the data stops, not when the revs do
+
+The engine-off summary keyed on RPM falling below the running threshold, and
+on the car it never appeared.
+
+Killing the ignition cuts the ECU's power as well, so the last frame it ever
+sends freezes at whatever the engine was doing - often several hundred rpm -
+and the model faithfully keeps reporting it. Waiting for that number to fall
+waits for ever.
+
+The summary now closes the run when the engine stops *or* the link goes
+offline, and it is checked on every pass rather than only when a frame arrives.
+That second half matters as much as the first: the situation it exists for is
+precisely the one where frames have stopped.
+
+## Settings live in flash, and only numbers live there
+
+The setup page edits an `AlarmSettings`/`DashSettings` struct saved to NVS as
+one versioned blob. The version is bumped whenever the struct changes shape, so
+an update that removes a field comes up on defaults rather than reading the old
+bytes as new ones. Which value an alarm watches and which way it trips stays
+in the rule table in code.
+
+That line matters. A settings page that can rewire logic is a settings page
+that can brick the dash on a dark road; one that can only move numbers cannot
+produce a state the code has not already been written to handle. The stored
+record carries a magic word and a version, and a mismatch falls back to
+defaults rather than reinterpreting old bytes as new fields.
+
+The page stays editable with the engine running. Locking it while stopped was
+the first design and it was wrong: setting an oil pressure limit without
+watching the live value it guards is exactly the guesswork the page exists to
+end.
+
+## Alarms arm on a delay, not on RPM alone
+
+Gating on RPM > 500 alone fired on every start. Cranking crosses 500 rpm while
+oil pressure is still building and the battery is still down from the starter,
+so two critical alarms went off every time the engine caught - the fastest
+possible way to teach a driver that red means nothing.
+
+The engine now has to have been running for the arming delay before anything
+can trip, and the status bar counts it down rather than going silently quiet.
+The default started at three seconds and was raised to six after watching a
+real start: oil pressure had not finished building by three.
+
+## Thresholds carry a deadband, and trips latch
+
+A value resting on its limit flickered its cell at the frame rate. An alarm now
+trips at the limit and clears only once the value has moved back past it by the
+hysteresis share.
+
+Latching matters more. A half-second oil pressure dip in a corner is the event
+most worth knowing about and the one a live-only display loses completely. Each
+alarm keeps its worst moment - value and RPM - until the run ends.
 
 ## Alarms are gated on RPM > 500
 
@@ -131,11 +198,24 @@ implementation is the specification available.
   `wiring/signal-list.md` before anything is soldered.
 - **The ECUMASTER serial protocol must be enabled** in the EMU Classic Client
   and made permanent, or the port stays quiet.
-- **Not yet run against the car.** The firmware compiles and the layout is
-  fixed at 480 × 320, but nothing has been verified on the bench. Two things
-  to watch on the first flash: whether the LVGL object pool is large enough
-  (`LV_MEM_SIZE`, currently 96 kB), and whether swipe gestures bubble
-  correctly when the touch lands on a tile rather than the background.
+- **The format tables are 1.200; the ECU runs 1.211.** Only channel 33 is
+  affected and nothing displays it, so nothing on screen is wrong today. The
+  full analysis is in [ecu-protocol.md](ecu-protocol.md#version-mismatch-channel-33)
+  and the 1.211 file is kept in [ecu-formats/](ecu-formats/). Deliberately not
+  adopted yet: the ECU is going to be updated to a newer firmware first, and
+  the tables must match whatever is actually flashed in it.
+- **SD logging is untested.** It lives on the `feature/sd-logging` branch and
+  has never been run. The format question in
+  [emu-log-format.md](emu-log-format.md) is still open too.
+- **UI repaints at frame rate.** `DashUi` updates the visible page whenever the
+  model's revision changes, which at 19200 baud is a few hundred times a
+  second. LVGL coalesces the redraw, but the formatting work is done every
+  time. Rate-limiting to about 20 Hz would cut it by an order of magnitude and
+  make the digits readable rather than a blur.
+- **LVGL object pool headroom is unmeasured.** `LV_MEM_SIZE` is 96 kB. The
+  Setup page's Limits category builds the most objects of any screen; if it
+  ever comes up blank or the dash restarts on the way to it, that is the first
+  thing to raise.
 - **Enclosure dimensions are not verified.** `enclosure/case.scad` is
   parametric and its geometry is right, but the measurements at the top of the
   file are placeholders. They must be taken from Elecrow's STEP model or the

@@ -1,147 +1,176 @@
 #include "alarm_engine.hpp"
 
+#include <math.h>
 #include <stdio.h>
 
 namespace ecu {
 namespace {
 
+// One rule per alarm. Only the *shape* lives here - which value is watched,
+// which way it trips, how it reads. The numbers are settings, so the setup
+// page can change them without being able to rewire the logic.
 struct AlarmRule {
     AlarmId id;
-    uint8_t page;  // page that displays this value
-    AlarmSeverity (*evaluate)(const EngineSnapshot&);
-    void (*format)(const EngineSnapshot&, char*, size_t);
+    const char* label;
+    const char* unit;
+    int8_t direction;   // +1 trips high, -1 trips low
+    uint8_t decimals;
+    float (*value)(const EngineSnapshot&);
+    bool (*applies)(const EngineSnapshot&);   // nullptr = always
 };
 
-AlarmSeverity oilPressure(const EngineSnapshot& s) {
-    if (s.oilPressureBar < 1.0f) return AlarmSeverity::Critical;
-    if (s.oilPressureBar < 1.6f) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void oilPressureText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "OIL P %.1f BAR", s.oilPressureBar);
-}
+float oilPressure(const EngineSnapshot& s) { return s.oilPressureBar; }
+float coolant(const EngineSnapshot& s) { return static_cast<float>(s.cltC); }
+float lambda(const EngineSnapshot& s) { return s.wboLambda; }
+float battery(const EngineSnapshot& s) { return s.batteryV; }
+float knock(const EngineSnapshot& s) { return s.knockLevelV; }
+float injectorDuty(const EngineSnapshot& s) { return s.injDutyPct; }
+float fuelPressure(const EngineSnapshot& s) { return s.fuelPressureBar; }
+float intakeAir(const EngineSnapshot& s) { return static_cast<float>(s.iatC); }
 
-AlarmSeverity coolant(const EngineSnapshot& s) {
-    if (s.cltC > 108) return AlarmSeverity::Critical;
-    if (s.cltC > 100) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void coolantText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "CLT %d C", static_cast<int>(s.cltC));
-}
+// Cruise runs lean on purpose; only a lean mixture under boost is a fault.
+bool underBoost(const EngineSnapshot& s) { return s.mapKpa > 140; }
 
-// Lean only matters under boost; cruise runs lean on purpose.
-AlarmSeverity lean(const EngineSnapshot& s) {
-    if (s.mapKpa <= 140) return AlarmSeverity::None;
-    if (s.wboLambda > 0.95f) return AlarmSeverity::Critical;
-    if (s.wboLambda > 0.90f) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void leanText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "LEAN %.2f", s.wboLambda);
-}
-
-AlarmSeverity battery(const EngineSnapshot& s) {
-    if (s.batteryV < 12.4f) return AlarmSeverity::Critical;
-    if (s.batteryV < 13.2f || s.batteryV > 15.0f) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void batteryText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "BATT %.1f V", s.batteryV);
-}
-
-AlarmSeverity knock(const EngineSnapshot& s) {
-    if (s.knockLevelV > 2.0f) return AlarmSeverity::Critical;
-    if (s.knockLevelV > 1.2f) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void knockText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "KNOCK %.1f V", s.knockLevelV);
-}
-
-AlarmSeverity injectorDuty(const EngineSnapshot& s) {
-    if (s.injDutyPct > 92.0f) return AlarmSeverity::Critical;
-    if (s.injDutyPct > 85.0f) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void injectorDutyText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "INJ DC %d %%", static_cast<int>(s.injDutyPct));
-}
-
-AlarmSeverity fuelPressure(const EngineSnapshot& s) {
-    if (s.fuelPressureBar < 2.6f) return AlarmSeverity::Critical;
-    if (s.fuelPressureBar < 3.2f) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void fuelPressureText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "FUEL P %.1f BAR", s.fuelPressureBar);
-}
-
-AlarmSeverity intakeAir(const EngineSnapshot& s) {
-    if (s.iatC > 75) return AlarmSeverity::Critical;
-    if (s.iatC > 65) return AlarmSeverity::Warning;
-    return AlarmSeverity::None;
-}
-void intakeAirText(const EngineSnapshot& s, char* out, size_t n) {
-    snprintf(out, n, "IAT %d C", static_cast<int>(s.iatC));
-}
-
-// Page indices match the screen order in DashUi.
-constexpr uint8_t kPageDrive = 0;
-constexpr uint8_t kPageTune = 1;
-constexpr uint8_t kPageTemps = 2;
-
-const AlarmRule kRules[] = {
-    { AlarmId::OilPressure,  kPageDrive, oilPressure,  oilPressureText },
-    { AlarmId::Coolant,      kPageDrive, coolant,      coolantText },
-    { AlarmId::Lean,         kPageDrive, lean,         leanText },
-    { AlarmId::Battery,      kPageDrive, battery,      batteryText },
-    { AlarmId::Knock,        kPageTune,  knock,        knockText },
-    { AlarmId::InjectorDuty, kPageTune,  injectorDuty, injectorDutyText },
-    { AlarmId::FuelPressure, kPageTemps, fuelPressure, fuelPressureText },
-    { AlarmId::IntakeAir,    kPageTemps, intakeAir,    intakeAirText },
+// Order is priority order: when several alarms share a severity, the first one
+// here is the one the status bar names. Oil pressure outranks intake air.
+const AlarmRule kRules[kAlarmCount] = {
+    { AlarmId::OilPressure,  "OIL P",  "bar", -1, 1, oilPressure,  nullptr },
+    { AlarmId::Coolant,      "CLT",    "C",   +1, 0, coolant,      nullptr },
+    { AlarmId::Lean,         "LEAN",   "",    +1, 2, lambda,       underBoost },
+    { AlarmId::BatteryLow,   "BATT",   "V",   -1, 1, battery,      nullptr },
+    { AlarmId::BatteryHigh,  "CHARGE", "V",   +1, 1, battery,      nullptr },
+    { AlarmId::Knock,        "KNOCK",  "V",   +1, 1, knock,        nullptr },
+    { AlarmId::InjectorDuty, "INJ DC", "%",   +1, 0, injectorDuty, nullptr },
+    { AlarmId::FuelPressure, "FUEL P", "bar", -1, 1, fuelPressure, nullptr },
+    { AlarmId::IntakeAir,    "IAT",    "C",   +1, 0, intakeAir,    nullptr },
 };
-constexpr size_t kRuleCount = sizeof(kRules) / sizeof(kRules[0]);
+
+// True while the value is on the wrong side of the limit. `active` widens the
+// limit by the deadband, so an alarm that has tripped holds until the value has
+// genuinely recovered rather than chattering on the threshold.
+bool trips(float value, float limit, int8_t direction, bool active, float band) {
+    const float margin = active ? fabsf(limit) * band : 0.0f;
+    return direction > 0 ? (value > limit - margin) : (value < limit + margin);
+}
 
 }  // namespace
 
-void AlarmEngine::evaluate(const EngineSnapshot& s) {
+AlarmSettings defaultAlarmSettings() {
+    AlarmSettings s = {};
+
+    // Starting points, not measurements. Nothing here has been checked against
+    // this engine - that is what the setup page is for.
+    s.limits[static_cast<uint8_t>(AlarmId::OilPressure)]  = { 1.6f,  1.0f,  true };
+    s.limits[static_cast<uint8_t>(AlarmId::Coolant)]      = { 100.0f, 108.0f, true };
+    s.limits[static_cast<uint8_t>(AlarmId::Lean)]         = { 0.90f, 0.95f, true };
+    s.limits[static_cast<uint8_t>(AlarmId::BatteryLow)]   = { 13.2f, 12.4f, true };
+    s.limits[static_cast<uint8_t>(AlarmId::BatteryHigh)]  = { 15.0f, 15.5f, true };
+    s.limits[static_cast<uint8_t>(AlarmId::Knock)]        = { 1.2f,  2.0f,  true };
+    s.limits[static_cast<uint8_t>(AlarmId::InjectorDuty)] = { 85.0f, 92.0f, true };
+    s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 2.2f,  1.9f,  true };
+    s.limits[static_cast<uint8_t>(AlarmId::IntakeAir)]    = { 65.0f, 75.0f, true };
+
+    // Six seconds, not three: on this engine oil pressure had not finished
+    // building by three, so the delay was still cutting it fine.
+    s.armDelayS = 6;
+    s.hysteresisPercent = 2;
+    return s;
+}
+
+void AlarmEngine::evaluate(const EngineSnapshot& s, uint32_t nowMs) {
     running_ = s.rpm > kEngineRunningRpm;
+
+    if (running_ && !wasRunning_) {
+        runningSinceMs_ = nowMs;
+    }
+    wasRunning_ = running_;
+
+    const uint32_t delayMs = static_cast<uint32_t>(settings_.armDelayS) * 1000u;
+    if (!running_) {
+        armed_ = false;
+        armingRemainingMs_ = delayMs;
+    } else {
+        const uint32_t up = nowMs - runningSinceMs_;
+        armed_ = up >= delayMs;
+        armingRemainingMs_ = armed_ ? 0 : delayMs - up;
+    }
 
     worst_ = AlarmSeverity::None;
     worstText_[0] = '\0';
 
-    for (size_t i = 0; i < kRuleCount; ++i) {
+    const float band = settings_.hysteresisPercent / 100.0f;
+
+    for (uint8_t i = 0; i < kAlarmCount; ++i) {
         const AlarmRule& rule = kRules[i];
         const uint8_t slot = static_cast<uint8_t>(rule.id);
+        const AlarmLimits& limits = settings_.limits[slot];
 
         const AlarmSeverity previous = severity_[slot];
-        const AlarmSeverity now = running_ ? rule.evaluate(s) : AlarmSeverity::None;
+        AlarmSeverity now = AlarmSeverity::None;
+
+        const bool considered =
+            armed_ && limits.enabled && (rule.applies == nullptr || rule.applies(s));
+
+        const float value = rule.value(s);
+        if (considered) {
+            if (trips(value, limits.crit, rule.direction, previous >= AlarmSeverity::Critical, band)) {
+                now = AlarmSeverity::Critical;
+            } else if (trips(value, limits.warn, rule.direction, previous >= AlarmSeverity::Warning, band)) {
+                now = AlarmSeverity::Warning;
+            }
+        }
         severity_[slot] = now;
 
-        if (now == AlarmSeverity::Critical && previous != AlarmSeverity::Critical) {
-            requestedPage_ = rule.page;
-            pageRequested_ = true;
+        if (now > previous) {
+            LatchedAlarm hit;
+            hit.id = rule.id;
+            hit.label = rule.label;
+            hit.unit = rule.unit;
+            hit.value = value;
+            hit.rpm = s.rpm;
+            hit.severity = now;
+            hit.decimals = rule.decimals;
+            latch(hit);
         }
 
         if (now > worst_) {
             worst_ = now;
-            rule.format(s, worstText_, sizeof(worstText_));
+            snprintf(worstText_, sizeof(worstText_), "%s %.*f %s",
+                     rule.label, rule.decimals, value, rule.unit);
         }
     }
+}
+
+void AlarmEngine::latch(const LatchedAlarm& hit) {
+    for (uint8_t i = 0; i < latchedCount_; ++i) {
+        if (latched_[i].id != hit.id) {
+            continue;
+        }
+        // Already recorded: keep the worst moment, not the most recent one.
+        if (hit.severity > latched_[i].severity) {
+            latched_[i] = hit;
+        }
+        return;
+    }
+
+    if (latchedCount_ < kAlarmCount) {
+        latched_[latchedCount_++] = hit;
+    }
+}
+
+void AlarmEngine::clearLatched() {
+    latchedCount_ = 0;
 }
 
 AlarmSeverity AlarmEngine::severity(AlarmId id) const {
     return severity_[static_cast<uint8_t>(id)];
 }
 
-bool AlarmEngine::takeCriticalPageRequest(uint8_t& pageOut) {
-    if (!pageRequested_) {
-        return false;
+uint16_t AlarmEngine::armingRemainingS() const {
+    if (armed_ || !running_) {
+        return 0;
     }
-    pageOut = requestedPage_;
-    pageRequested_ = false;
-    return true;
+    return static_cast<uint16_t>((armingRemainingMs_ + 999) / 1000);
 }
 
 }  // namespace ecu

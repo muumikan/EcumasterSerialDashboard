@@ -24,7 +24,7 @@ Change it there; this file documents it.
 | 41 | LCD DC | |
 | 40 | LCD CS | |
 | 2 | LCD RST | |
-| 38 | LCD backlight | Driven high after the panel is cleared |
+| 38 | LCD backlight | LEDC PWM, channel 0, 5 kHz / 8 bit — brightness and night mode |
 | 15 | Touch I2C SDA | GT911, shared with the on-board RTC |
 | 16 | Touch I2C SCL | **See the conflict note below** |
 | 47 | Touch INT | |

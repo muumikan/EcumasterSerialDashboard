@@ -147,7 +147,10 @@ void MainScreen::update(const EngineDataModel& model,
     clt_.setSeverity(alarms.severity(AlarmId::Coolant));
     oil_.setSeverity(alarms.severity(AlarmId::OilPressure));
     lambda_.setSeverity(alarms.severity(AlarmId::Lean));
-    battery_.setSeverity(alarms.severity(AlarmId::Battery));
+    // Under- and over-voltage are separate rules; the cell shows the worse.
+    const AlarmSeverity low = alarms.severity(AlarmId::BatteryLow);
+    const AlarmSeverity high = alarms.severity(AlarmId::BatteryHigh);
+    battery_.setSeverity(low > high ? low : high);
 }
 
 }  // namespace ecu
