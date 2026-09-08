@@ -83,8 +83,7 @@ Only the visible page is updated, and only when the model's revision moves.
 ### Settings — `src/settings/`
 
 `DashSettings` holds everything the driver can change: alarm limits and
-enables, the arming delay and deadband, shift points, backlight, auto-return
-and logging. `SettingsStore` keeps it in NVS as one versioned blob, so a
+enables, the arming delay and deadband, shift points, backlight and logging. `SettingsStore` keeps it in NVS as one versioned blob, so a
 firmware change that alters the struct falls back to defaults rather than
 reading old bytes as new fields.
 

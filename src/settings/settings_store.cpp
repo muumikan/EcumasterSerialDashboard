@@ -14,7 +14,7 @@ constexpr char kKey[] = "cfg";
 // version is ignored rather than reinterpreted, so a firmware update can never
 // come up with a threshold read out of the wrong bytes.
 constexpr uint32_t kMagic = 0x45435544;  // 'ECUD'
-constexpr uint16_t kVersion = 1;
+constexpr uint16_t kVersion = 2;
 
 struct StoredSettings {
     uint32_t magic;
@@ -72,16 +72,15 @@ DashSettings defaultDashSettings() {
     DashSettings s = {};
     s.alarms = defaultAlarmSettings();
 
-    // Guesses for a 1G-GTE, and the reason the setup page exists.
-    s.shiftFirstRpm = 3500;
-    s.shiftRedRpm = 6800;
+    // Set from watching the car rather than guessed at, unlike the first pass.
+    s.shiftFirstRpm = 1000;
+    s.shiftRedRpm = 6000;
     s.shiftAllRpm = 7200;
 
     s.brightnessPct = 90;
     s.nightBrightnessPct = 35;
     s.nightMode = false;
 
-    s.idleReturnS = 30;
     s.bootSweep = true;
     s.logging = true;
     return s;

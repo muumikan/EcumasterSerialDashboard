@@ -21,7 +21,8 @@ namespace ecu {
 constexpr uint32_t kSettingsSaveDelayMs = 4000;
 
 // How long the shift lights sweep at power-up, the way a race dash does.
-constexpr uint32_t kBootSweepMs = 900;
+// Long enough to actually watch: at 900 ms it was over before you looked up.
+constexpr uint32_t kBootSweepMs = 2600;
 
 // Owns the always-on chrome (shift lights, status bar) and page navigation.
 //
@@ -37,7 +38,6 @@ public:
     void nextPage() { showPage(static_cast<uint8_t>((page_ + 1) % kPageCount)); }
     void previousPage() { showPage(static_cast<uint8_t>((page_ + kPageCount - 1) % kPageCount)); }
 
-    void noteInteraction(uint32_t nowMs) { lastInteractionMs_ = nowMs; }
     void dismissSummary();
 
     // Applies the current settings everywhere and schedules a save.
@@ -50,7 +50,7 @@ private:
     void buildChrome(lv_obj_t* screen);
     void applySettings();
     void buildSummary(lv_obj_t* screen);
-    void updateSummary(uint32_t nowMs);
+    void updateSummary(LinkState link);
     void setShiftSegments(uint8_t lit);
     bool runBootSweep(uint32_t nowMs);
     void updateShiftLights(uint16_t rpm);
@@ -87,7 +87,6 @@ private:
     uint8_t litSegments_ = 0xFF;
     uint32_t bootSweepEndMs_ = 0;
     uint32_t lastRevision_ = UINT32_MAX;
-    uint32_t lastInteractionMs_ = 0;
     LinkState lastLink_ = LinkState::Offline;
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
     uint8_t lastLatched_ = 0xFF;

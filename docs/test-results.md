@@ -36,7 +36,32 @@ Firmware: `2bcd7a8` (five pages, settings in flash) on the CrowPanel Advance
 ### Worth checking on the next run
 
 The two things most likely to be wrong are both alarm-related, because they
-have never seen a real engine: whether three seconds of arming delay is
-actually enough for oil pressure to build on this engine, and whether the
-invented thresholds are anywhere near right. Both are adjustable on the Setup
-page now, so the next drive is the place to find out rather than a reflash.
+have never seen a real engine: whether the arming delay is long enough for oil
+pressure to build on this engine, and whether the invented thresholds are
+anywhere near right. Both are adjustable on the Setup page now, so the next
+drive is the place to find out rather than a reflash.
+
+---
+
+## 2026-09-08 (later) — findings from the first run
+
+Observed on the car and fixed in the same session:
+
+- **The engine-off summary never appeared.** Cutting the ignition kills the ECU
+  before RPM falls, so the last frame freezes at a few hundred rpm and the
+  summary's trigger never fired. It now also ends the run on link loss, and is
+  checked every pass rather than only when a frame arrives.
+- **The idle return to Drive was unwanted.** It moved the screen away while a
+  page was still being read. Removed; pages change only by swipe.
+- **Three seconds of arming delay was too short.** Raised to six.
+- **The boot sweep was over before you could look at it.** 900 ms to 2600 ms.
+- **Cells looked washed out.** Panels darkened and the dividing lines lifted, so
+  the numerals read against near-black.
+
+Defaults corrected from what the car actually does: fuel pressure warn 3.2 to
+2.2 bar and critical 2.6 to 1.9 bar, shift first light 3 500 to 1 000 rpm, red
+zone 6 800 to 6 000.
+
+Note that the settings blob version was bumped, so **the first boot after this
+update discards any settings stored on the device** and comes up on the new
+defaults.

@@ -40,8 +40,12 @@ ECU but not wired, so they are not displayed.
 | **Setup** | Alarm limits and behaviour, shift points, brightness, logging |
 
 Above every page sit two always-on layers: a 6 px shift-light strip, lit from
-3 500 rpm and red from 6 800, and a status bar carrying the link state and the
+1 000 rpm and red from 6 000, and a status bar carrying the link state and the
 worst active alarm regardless of which page is up.
+
+The page changes only when you swipe it. There is no idle timeout returning to
+Drive: on the car it moved the screen out from under you while you were still
+reading it.
 
 An out-of-range value lights its own cell — amber for a warning, red for
 critical — and names itself in the status bar. Nothing but a swipe ever changes

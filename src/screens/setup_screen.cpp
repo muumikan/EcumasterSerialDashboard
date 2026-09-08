@@ -89,7 +89,6 @@ const SetupItem kDisplayItems[] = {
     { "Brightness",  "%", SetupType::U8,   FIELD_OFFSET(brightnessPct),      5, 10, 100, 0 },
     { "Night mode",  "",  SetupType::Bool, FIELD_OFFSET(nightMode),          0, 0, 1, 0 },
     { "Night level", "%", SetupType::U8,   FIELD_OFFSET(nightBrightnessPct), 5, 5,  100, 0 },
-    { "Auto return", "s", SetupType::U16,  FIELD_OFFSET(idleReturnS),        5, 0,  300, 0 },
     { "Boot sweep",  "",  SetupType::Bool, FIELD_OFFSET(bootSweep),          0, 0, 1, 0 },
 };
 

@@ -22,7 +22,6 @@ struct DashSettings {
     uint8_t nightBrightnessPct;  // used while night mode is on
     bool nightMode;
 
-    uint16_t idleReturnS;   // back to Drive after this long untouched; 0 = never
     bool bootSweep;
     bool logging;
 };

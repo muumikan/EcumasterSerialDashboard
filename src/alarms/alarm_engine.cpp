@@ -67,10 +67,12 @@ AlarmSettings defaultAlarmSettings() {
     s.limits[static_cast<uint8_t>(AlarmId::BatteryHigh)]  = { 15.0f, 15.5f, true };
     s.limits[static_cast<uint8_t>(AlarmId::Knock)]        = { 1.2f,  2.0f,  true };
     s.limits[static_cast<uint8_t>(AlarmId::InjectorDuty)] = { 85.0f, 92.0f, true };
-    s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 3.2f,  2.6f,  true };
+    s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 2.2f,  1.9f,  true };
     s.limits[static_cast<uint8_t>(AlarmId::IntakeAir)]    = { 65.0f, 75.0f, true };
 
-    s.armDelayS = 3;
+    // Six seconds, not three: on this engine oil pressure had not finished
+    // building by three, so the delay was still cutting it fine.
+    s.armDelayS = 6;
     s.hysteresisPercent = 2;
     return s;
 }

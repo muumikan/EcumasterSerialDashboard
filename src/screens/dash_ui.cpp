@@ -24,10 +24,6 @@ void gestureCb(lv_event_t* event) {
     lv_indev_wait_release(lv_indev_get_act());
 }
 
-void pressedCb(lv_event_t* event) {
-    static_cast<DashUi*>(lv_event_get_user_data(event))->noteInteraction(lv_tick_get());
-}
-
 void summaryTapCb(lv_event_t* event) {
     static_cast<DashUi*>(lv_event_get_user_data(event))->dismissSummary();
 }
@@ -65,7 +61,6 @@ void DashUi::begin(lv_obj_t* screen) {
     }
 
     lv_obj_add_event_cb(screen, gestureCb, LV_EVENT_GESTURE, this);
-    lv_obj_add_event_cb(screen, pressedCb, LV_EVENT_PRESSED, this);
 
     applySettings();
 
@@ -87,7 +82,6 @@ void DashUi::settingsChanged() {
     applySettings();
     settingsDirty_ = true;
     saveDueMs_ = lv_tick_get() + kSettingsSaveDelayMs;
-    lastInteractionMs_ = lv_tick_get();
 }
 
 void DashUi::buildChrome(lv_obj_t* screen) {
@@ -180,11 +174,15 @@ void DashUi::buildSummary(lv_obj_t* screen) {
 
 void DashUi::dismissSummary() {
     lv_obj_add_flag(summary_, LV_OBJ_FLAG_HIDDEN);
-    lastInteractionMs_ = lv_tick_get();
 }
 
-void DashUi::updateSummary(uint32_t nowMs) {
-    const bool running = alarms_.engineRunning();
+void DashUi::updateSummary(LinkState link) {
+    // Waiting for RPM to fall waits for ever. Killing the ignition cuts the
+    // ECU's power too, so the last frame ever sent freezes at whatever the
+    // engine was doing - often several hundred rpm - and the model keeps
+    // reporting it. A dead link ends the run just as surely as an idle that
+    // comes to a stop, so either one closes it out.
+    const bool running = alarms_.engineRunning() && link != LinkState::Offline;
 
     if (running) {
         engineWasRunning_ = true;
@@ -216,7 +214,6 @@ void DashUi::updateSummary(uint32_t nowMs) {
     lv_obj_set_style_text_color(summaryBody_, latched ? theme::warn() : theme::dim(), 0);
 
     lv_obj_clear_flag(summary_, LV_OBJ_FLAG_HIDDEN);
-    (void)nowMs;
 }
 
 void DashUi::showPage(uint8_t index) {
@@ -234,7 +231,6 @@ void DashUi::showPage(uint8_t index) {
     lv_label_set_text(pageName_, pages_[page_]->name());
 
     lastRevision_ = UINT32_MAX;  // force the new page to fill in immediately
-    lastInteractionMs_ = lv_tick_get();
 }
 
 void DashUi::setShiftSegments(uint8_t lit) {
@@ -374,12 +370,6 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
         }
     }
 
-    // Idle timeout: never leave a non-driving page up on the move.
-    if (settings_.idleReturnS != 0 && page_ != 0 &&
-        (nowMs - lastInteractionMs_) > settings_.idleReturnS * 1000u) {
-        showPage(0);
-    }
-
     // Edits are written once the driver stops adjusting, not per button press.
     if (settingsDirty_ && static_cast<int32_t>(nowMs - saveDueMs_) >= 0) {
         settingsDirty_ = false;
@@ -387,11 +377,12 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
         Serial.println(F("settings: saved"));
     }
 
-    if (changed) {
-        updateSummary(nowMs);
-    }
+    // Checked every pass, not only when data arrives: the case this exists for
+    // is the one where data has stopped arriving.
+    const LinkState link = model.linkState(nowMs);
+    updateSummary(link);
 
-    if (changed || lastLink_ != model.linkState(nowMs)) {
+    if (changed || lastLink_ != link) {
         updateStatusBar(model, nowMs);
         pages_[page_]->update(model, alarms_, peaks_, nowMs);
     }

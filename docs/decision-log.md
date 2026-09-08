@@ -20,10 +20,39 @@ What remains is the quiet version: colour where the value lives, one line of
 text that follows you across pages, and the page changes only when a thumb
 changes it.
 
+## The page changes only when a thumb changes it
+
+Two mechanisms used to move it on their own, and both are gone.
+
+A critical alarm used to pull up the page showing the value. It bought nothing
+the status bar was not already saying, and it took the screen away from
+whatever the driver had chosen.
+
+An idle timeout used to return to Drive after thirty seconds. On the car that
+turned out to be worse: it moved the screen out from under you while you were
+still reading a page you had deliberately opened. Manual is the whole rule now.
+
+## A run ends when the data stops, not when the revs do
+
+The engine-off summary keyed on RPM falling below the running threshold, and
+on the car it never appeared.
+
+Killing the ignition cuts the ECU's power as well, so the last frame it ever
+sends freezes at whatever the engine was doing - often several hundred rpm -
+and the model faithfully keeps reporting it. Waiting for that number to fall
+waits for ever.
+
+The summary now closes the run when the engine stops *or* the link goes
+offline, and it is checked on every pass rather than only when a frame arrives.
+That second half matters as much as the first: the situation it exists for is
+precisely the one where frames have stopped.
+
 ## Settings live in flash, and only numbers live there
 
 The setup page edits an `AlarmSettings`/`DashSettings` struct saved to NVS as
-one versioned blob. Which value an alarm watches and which way it trips stays
+one versioned blob. The version is bumped whenever the struct changes shape, so
+an update that removes a field comes up on defaults rather than reading the old
+bytes as new ones. Which value an alarm watches and which way it trips stays
 in the rule table in code.
 
 That line matters. A settings page that can rewire logic is a settings page
@@ -44,8 +73,10 @@ oil pressure is still building and the battery is still down from the starter,
 so two critical alarms went off every time the engine caught - the fastest
 possible way to teach a driver that red means nothing.
 
-The engine now has to have been running for the arming delay, three seconds by
-default, and the status bar counts it down rather than going silently quiet.
+The engine now has to have been running for the arming delay before anything
+can trip, and the status bar counts it down rather than going silently quiet.
+The default started at three seconds and was raised to six after watching a
+real start: oil pressure had not finished building by three.
 
 ## Thresholds carry a deadband, and trips latch
 
