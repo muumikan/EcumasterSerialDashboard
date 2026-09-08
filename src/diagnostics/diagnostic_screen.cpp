@@ -30,21 +30,6 @@ lv_obj_t* makeRow(lv_obj_t* parent, lv_coord_t y, const char* caption) {
     return right;
 }
 
-// Check-engine bits, from Ecumaster's own paramlist "checkEngine" in the 1.211
-// format definition (docs/ecu-formats/version1_211.xml).
-//
-// That list numbers its entries from 1; this table is indexed by bit position,
-// so entry N sits at bit N-1. The file does not spell that out, but it is the
-// only reading that works: fuelCorrections in the same file has sixteen
-// entries for a sixteen-bit word, which needs value 16 to mean bit 15.
-//
-// Worth confirming on the car rather than trusting: unplug the intake air
-// sensor and IAT should be the flag that lights.
-const char* kCelBits[11] = {
-    "CLT", "IAT", "MAP", "WBO", "EGT1", "EGT2",
-    "EGT AL", "KNOCK", "FF SENS", "DBW", "FPR",
-};
-
 const char* kPeakCaptions[11] = {
     "RPM max", "MAP max", "CLT max", "IAT max",
     "Oil P max", "Oil P min",
@@ -83,7 +68,7 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
 
     for (int i = 0; i < 11; ++i) {
         lv_obj_t* bit = lv_label_create(left);
-        lv_label_set_text(bit, kCelBits[i]);
+        lv_label_set_text(bit, celBitName(static_cast<uint8_t>(i)));
         lv_obj_set_style_text_color(bit, theme::dotOff(), 0);
         lv_obj_align(bit, LV_ALIGN_TOP_LEFT, (i % 3) * 72, 200 + (i / 3) * 16);
         celBits_[i] = bit;

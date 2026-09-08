@@ -77,7 +77,12 @@ AlarmSettings defaultAlarmSettings() {
     return s;
 }
 
-void AlarmEngine::evaluate(const EngineSnapshot& s, uint32_t nowMs) {
+void AlarmEngine::evaluate(const EngineSnapshot& s,
+                           LinkState link,
+                           const DateTime& wall,
+                           uint32_t nowMs) {
+    events_.stampRunStart(wall);
+
     running_ = s.rpm > kEngineRunningRpm;
 
     if (running_ && !wasRunning_) {
@@ -131,6 +136,15 @@ void AlarmEngine::evaluate(const EngineSnapshot& s, uint32_t nowMs) {
             hit.severity = now;
             hit.decimals = rule.decimals;
             latch(hit);
+
+            char reading[12];
+            snprintf(reading, sizeof(reading), "%.*f%s%s",
+                     rule.decimals, value,
+                     rule.unit[0] != '\0' ? " " : "", rule.unit);
+            events_.raise(static_cast<uint16_t>(kLimitKeyBase + slot), wall,
+                          rule.label, reading, s.rpm, now, nowMs);
+        } else if (now == AlarmSeverity::None && previous != AlarmSeverity::None) {
+            events_.clear(static_cast<uint16_t>(kLimitKeyBase + slot), nowMs);
         }
 
         if (now > worst_) {
@@ -138,6 +152,55 @@ void AlarmEngine::evaluate(const EngineSnapshot& s, uint32_t nowMs) {
             snprintf(worstText_, sizeof(worstText_), "%s %.*f %s",
                      rule.label, rule.decimals, value, rule.unit);
         }
+    }
+
+    recordCel(s, wall, nowMs);
+    recordLink(link, s, wall, nowMs);
+}
+
+// The ECU's own check-engine word. Only the edges are interesting: a bit that
+// stays set is one event, and a bit that goes away closes it rather than
+// vanishing from the record the way the Diag page's grid lets it.
+void AlarmEngine::recordCel(const EngineSnapshot& s, const DateTime& wall, uint32_t nowMs) {
+    const uint16_t rising = static_cast<uint16_t>(s.celFlags & ~lastCel_);
+    const uint16_t falling = static_cast<uint16_t>(lastCel_ & ~s.celFlags);
+    lastCel_ = s.celFlags;
+
+    if ((rising | falling) == 0) {
+        return;
+    }
+
+    for (uint8_t bit = 0; bit < kCelBitCount; ++bit) {
+        const uint16_t mask = static_cast<uint16_t>(1u << bit);
+        const uint16_t key = static_cast<uint16_t>(kCelKeyBase + bit);
+        if (rising & mask) {
+            // The bit's name goes in the value column: "CEL / IAT" fits the
+            // row, "CEL IAT" as one label does not.
+            events_.raise(key, wall, "CEL", celBitName(bit), s.rpm,
+                          AlarmSeverity::Warning, nowMs);
+        } else if (falling & mask) {
+            events_.clear(key, nowMs);
+        }
+    }
+}
+
+// Losing the link is the one fault the dashboard can see without the ECU's
+// help, and the one a loose connector produces in clusters. Stale escalates
+// into the same event rather than opening a second one.
+void AlarmEngine::recordLink(LinkState link, const EngineSnapshot& s,
+                             const DateTime& wall, uint32_t nowMs) {
+    if (link == lastLink_) {
+        return;
+    }
+    lastLink_ = link;
+
+    if (link == LinkState::Online) {
+        events_.clear(kLinkKey, nowMs);
+    } else {
+        events_.raise(kLinkKey, wall, "LINK", toString(link), s.rpm,
+                      link == LinkState::Offline ? AlarmSeverity::Critical
+                                                 : AlarmSeverity::Warning,
+                      nowMs);
     }
 }
 

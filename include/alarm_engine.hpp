@@ -2,15 +2,12 @@
 
 #include <stdint.h>
 
+#include "alarm_severity.hpp"
+#include "date_time.hpp"
 #include "engine_data.hpp"
+#include "event_log.hpp"
 
 namespace ecu {
-
-enum class AlarmSeverity : uint8_t {
-    None = 0,
-    Warning = 1,
-    Critical = 2,
-};
 
 enum class AlarmId : uint8_t {
     OilPressure,
@@ -82,7 +79,13 @@ struct LatchedAlarm {
 // was not already showing.
 class AlarmEngine {
 public:
-    void evaluate(const EngineSnapshot& snapshot, uint32_t nowMs);
+    // `wall` only stamps the events it records; every timing decision here is
+    // made on `nowMs`, so the dashboard behaves the same whether or not the
+    // RTC answered.
+    void evaluate(const EngineSnapshot& snapshot,
+                  LinkState link,
+                  const DateTime& wall,
+                  uint32_t nowMs);
 
     AlarmSeverity severity(AlarmId id) const;
     AlarmSeverity worst() const { return worst_; }
@@ -100,13 +103,21 @@ public:
     const LatchedAlarm& latched(uint8_t index) const { return latched_[index]; }
     void clearLatched();
 
+    // Time-ordered record of everything that tripped this run: limits, the
+    // ECU's own check-engine bits and the health of the serial link.
+    const EventLog& events() const { return events_; }
+
     AlarmSettings& settings() { return settings_; }
     const AlarmSettings& settings() const { return settings_; }
 
 private:
     void latch(const LatchedAlarm& hit);
+    void recordCel(const EngineSnapshot& s, const DateTime& wall, uint32_t nowMs);
+    void recordLink(LinkState link, const EngineSnapshot& s,
+                    const DateTime& wall, uint32_t nowMs);
 
     AlarmSettings settings_ = defaultAlarmSettings();
+    EventLog events_;
 
     AlarmSeverity severity_[kAlarmCount] = {};
     LatchedAlarm latched_[kAlarmCount] = {};
@@ -114,6 +125,9 @@ private:
 
     AlarmSeverity worst_ = AlarmSeverity::None;
     char worstText_[24] = {0};
+
+    uint16_t lastCel_ = 0;
+    LinkState lastLink_ = LinkState::Offline;
 
     bool running_ = false;
     bool wasRunning_ = false;

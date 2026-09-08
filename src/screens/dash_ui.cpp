@@ -355,14 +355,17 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
     lv_label_set_text(alarmText_, line);
     lv_obj_align(alarmText_, LV_ALIGN_CENTER, 0, 0);
 
-    const uint8_t latched = alarms_.latchedCount();
-    if (latched != lastLatched_) {
-        lastLatched_ = latched;
-        if (latched == 0) {
+    // Counts events, not conditions: the badge is there to say "something
+    // happened, go and look", and it has to keep saying so after the condition
+    // has cleared.
+    const uint32_t events = alarms_.events().total();
+    if (events != lastEventTotal_) {
+        lastEventTotal_ = events;
+        if (events == 0) {
             lv_label_set_text(latchBadge_, "");
         } else {
             char badge[8];
-            snprintf(badge, sizeof(badge), "! %u", static_cast<unsigned>(latched));
+            snprintf(badge, sizeof(badge), "! %lu", static_cast<unsigned long>(events));
             lv_label_set_text(latchBadge_, badge);
         }
     }
@@ -380,14 +383,20 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
 void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     const bool sweeping = runBootSweep(nowMs);
     const bool changed = model.revision() != lastRevision_;
+    const LinkState link = model.linkState(nowMs);
     const bool clockRead = rtc_.loop(nowMs);
 
-    if (changed) {
+    // Evaluated on a link change as well as on new data: losing the link is
+    // exactly the case where no new data is coming, and it is an event the
+    // log has to record.
+    if (changed || link != lastLink_) {
         lastRevision_ = model.revision();
-        alarms_.evaluate(model.snapshot(), nowMs);
-        peaks_.record(model.snapshot());
-        if (!sweeping) {
-            updateShiftLights(model.snapshot().rpm);
+        alarms_.evaluate(model.snapshot(), link, rtc_.now(), nowMs);
+        if (changed) {
+            peaks_.record(model.snapshot());
+            if (!sweeping) {
+                updateShiftLights(model.snapshot().rpm);
+            }
         }
     }
 
@@ -400,7 +409,6 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
 
     // Checked every pass, not only when data arrives: the case this exists for
     // is the one where data has stopped arriving.
-    const LinkState link = model.linkState(nowMs);
     updateSummary(link);
 
     // The clock read is in the condition so the status bar keeps ticking even

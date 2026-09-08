@@ -4,6 +4,19 @@
 
 namespace ecu {
 
+namespace {
+
+const char* kCelBits[kCelBitCount] = {
+    "CLT", "IAT", "MAP", "WBO", "EGT1", "EGT2",
+    "EGT AL", "KNOCK", "FF SENS", "DBW", "FPR",
+};
+
+}  // namespace
+
+const char* celBitName(uint8_t bit) {
+    return bit < kCelBitCount ? kCelBits[bit] : "?";
+}
+
 const char* toString(LinkState state) {
     switch (state) {
         case LinkState::Online:  return "ONLINE";

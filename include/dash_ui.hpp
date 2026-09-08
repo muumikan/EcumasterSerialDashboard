@@ -92,7 +92,7 @@ private:
     uint32_t lastRevision_ = UINT32_MAX;
     LinkState lastLink_ = LinkState::Offline;
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
-    uint8_t lastLatched_ = 0xFF;
+    uint32_t lastEventTotal_ = UINT32_MAX;
     char clockShown_[6] = {0};
     bool engineWasRunning_ = false;
 };

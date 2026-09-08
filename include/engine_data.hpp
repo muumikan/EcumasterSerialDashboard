@@ -64,4 +64,19 @@ enum class LinkState : uint8_t {
 
 const char* toString(LinkState state);
 
+// Check-engine bits carried in EngineSnapshot::celFlags.
+//
+// From Ecumaster's own paramlist "checkEngine" in the 1.211 format definition
+// (docs/ecu-formats/version1_211.xml). That list numbers its entries from 1,
+// so entry N sits at bit N-1. The file does not spell that out, but it is the
+// only reading that works: fuelCorrections in the same file has sixteen
+// entries for a sixteen-bit word, which needs value 16 to mean bit 15.
+//
+// Worth confirming on the car rather than trusting: unplug the intake air
+// sensor and IAT should be the flag that lights.
+constexpr uint8_t kCelBitCount = 11;
+
+// Short name for a bit, or "?" if it is outside the documented range.
+const char* celBitName(uint8_t bit);
+
 }  // namespace ecu
