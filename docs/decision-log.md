@@ -167,6 +167,12 @@ implementation is the specification available.
   `wiring/signal-list.md` before anything is soldered.
 - **The ECUMASTER serial protocol must be enabled** in the EMU Classic Client
   and made permanent, or the port stays quiet.
+- **The format tables are 1.200; the ECU runs 1.211.** Only channel 33 is
+  affected and nothing displays it, so nothing on screen is wrong today. The
+  full analysis is in [ecu-protocol.md](ecu-protocol.md#version-mismatch-channel-33)
+  and the 1.211 file is kept in [ecu-formats/](ecu-formats/). Deliberately not
+  adopted yet: the ECU is going to be updated to a newer firmware first, and
+  the tables must match whatever is actually flashed in it.
 - **SD logging is untested.** It lives on the `feature/sd-logging` branch and
   has never been run. The format question in
   [emu-log-format.md](emu-log-format.md) is still open too.
