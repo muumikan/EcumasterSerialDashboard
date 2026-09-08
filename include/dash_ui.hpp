@@ -35,12 +35,15 @@ public:
     void previousPage() { showPage(static_cast<uint8_t>((page_ + kPageCount - 1) % kPageCount)); }
 
     void noteInteraction(uint32_t nowMs) { lastInteractionMs_ = nowMs; }
+    void dismissSummary();
 
 private:
     static constexpr uint8_t kPageCount = 4;
     static constexpr uint8_t kShiftSegments = 14;
 
     void buildChrome(lv_obj_t* screen);
+    void buildSummary(lv_obj_t* screen);
+    void updateSummary(uint32_t nowMs);
     void setShiftSegments(uint8_t lit);
     bool runBootSweep(uint32_t nowMs);
     void updateShiftLights(uint16_t rpm);
@@ -63,6 +66,10 @@ private:
     lv_obj_t* linkText_ = nullptr;
     lv_obj_t* pageArea_ = nullptr;
 
+    lv_obj_t* summary_ = nullptr;
+    lv_obj_t* summaryHead_ = nullptr;
+    lv_obj_t* summaryBody_ = nullptr;
+
     uint8_t page_ = 0;
     uint8_t litSegments_ = 0xFF;
     uint32_t bootSweepEndMs_ = 0;
@@ -71,6 +78,7 @@ private:
     LinkState lastLink_ = LinkState::Offline;
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
     uint8_t lastLatched_ = 0xFF;
+    bool engineWasRunning_ = false;
 };
 
 }  // namespace ecu

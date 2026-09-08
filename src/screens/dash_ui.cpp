@@ -31,6 +31,10 @@ void pressedCb(lv_event_t* event) {
     static_cast<DashUi*>(lv_event_get_user_data(event))->noteInteraction(lv_tick_get());
 }
 
+void summaryTapCb(lv_event_t* event) {
+    static_cast<DashUi*>(lv_event_get_user_data(event))->dismissSummary();
+}
+
 }  // namespace
 
 void DashUi::begin(lv_obj_t* screen) {
@@ -109,6 +113,84 @@ void DashUi::buildChrome(lv_obj_t* screen) {
 
     // ---- page area ------------------------------------------------------
     pageArea_ = makePanel(screen, 0, theme::kChromeHeight, theme::kPageWidth, theme::kPageHeight);
+
+    buildSummary(screen);
+}
+
+// Shown once when the engine stops. The peaks were always there, on a page the
+// driver had to remember to swipe to; this is the moment they are wanted.
+void DashUi::buildSummary(lv_obj_t* screen) {
+    summary_ = lv_obj_create(screen);
+    lv_obj_set_pos(summary_, 0, theme::kChromeHeight);
+    lv_obj_set_size(summary_, theme::kPageWidth, theme::kPageHeight);
+    lv_obj_set_style_radius(summary_, 0, 0);
+    lv_obj_set_style_border_width(summary_, 0, 0);
+    lv_obj_set_style_pad_all(summary_, 16, 0);
+    lv_obj_set_style_bg_color(summary_, theme::bg(), 0);
+    lv_obj_set_style_bg_opa(summary_, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(summary_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(summary_, LV_OBJ_FLAG_HIDDEN);
+
+    lv_obj_t* title = makeCaption(summary_, "RUN COMPLETE");
+    lv_obj_set_style_text_color(title, theme::cyan(), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 34);
+
+    summaryHead_ = lv_label_create(summary_);
+    lv_label_set_text(summaryHead_, "");
+    lv_obj_set_style_text_font(summaryHead_, &lv_font_montserrat_28, 0);
+    lv_obj_align(summaryHead_, LV_ALIGN_TOP_MID, 0, 58);
+
+    summaryBody_ = lv_label_create(summary_);
+    lv_label_set_text(summaryBody_, "");
+    lv_obj_set_style_text_color(summaryBody_, theme::dim(), 0);
+    lv_obj_align(summaryBody_, LV_ALIGN_TOP_MID, 0, 104);
+
+    lv_obj_t* note = makeCaption(summary_, "tap to dismiss");
+    lv_obj_set_style_text_color(note, theme::dotOff(), 0);
+    lv_obj_align(note, LV_ALIGN_BOTTOM_MID, 0, -20);
+
+    lv_obj_add_event_cb(summary_, summaryTapCb, LV_EVENT_CLICKED, this);
+}
+
+void DashUi::dismissSummary() {
+    lv_obj_add_flag(summary_, LV_OBJ_FLAG_HIDDEN);
+    lastInteractionMs_ = lv_tick_get();
+}
+
+void DashUi::updateSummary(uint32_t nowMs) {
+    const bool running = alarms_.engineRunning();
+
+    if (running) {
+        engineWasRunning_ = true;
+        lv_obj_add_flag(summary_, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    if (!engineWasRunning_ || !peaks_.seeded) {
+        return;  // never ran, or nothing recorded
+    }
+    engineWasRunning_ = false;
+
+    char text[48];
+    const float boost = (static_cast<float>(peaks_.mapKpa) - 100.0f) / 100.0f;
+    snprintf(text, sizeof(text), "%u rpm   %+.2f bar",
+             static_cast<unsigned>(peaks_.rpm), boost);
+    lv_label_set_text(summaryHead_, text);
+
+    const uint8_t latched = alarms_.latchedCount();
+    if (latched == 0) {
+        snprintf(text, sizeof(text), "Oil P min %.1f bar   CLT max %d C   no alarms",
+                 peaks_.oilPressureMinBar, static_cast<int>(peaks_.cltC));
+    } else {
+        snprintf(text, sizeof(text), "Oil P min %.1f bar   CLT max %d C   %u latched",
+                 peaks_.oilPressureMinBar, static_cast<int>(peaks_.cltC),
+                 static_cast<unsigned>(latched));
+    }
+    lv_label_set_text(summaryBody_, text);
+    lv_obj_set_style_text_color(summaryBody_, latched ? theme::warn() : theme::dim(), 0);
+
+    lv_obj_clear_flag(summary_, LV_OBJ_FLAG_HIDDEN);
+    (void)nowMs;
 }
 
 void DashUi::showPage(uint8_t index) {
@@ -258,6 +340,10 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     // Idle timeout: never leave a non-driving page up on the move.
     if (page_ != 0 && (nowMs - lastInteractionMs_) > kIdleReturnMs) {
         showPage(0);
+    }
+
+    if (changed) {
+        updateSummary(nowMs);
     }
 
     if (changed || lastLink_ != model.linkState(nowMs)) {
