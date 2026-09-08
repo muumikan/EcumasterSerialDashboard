@@ -18,6 +18,10 @@ namespace board {
 // EMU Classic streams its data log at 19200 baud, 8N1.
 constexpr uint32_t kEcuBaud = 19200;
 
+// The EDL-1 logger stream runs faster: 260-byte frames at 115200, 8N1.
+// Selected at build time - see ecu_link.hpp.
+constexpr uint32_t kEcuBaudEdl = 115200;
+
 // UART1-OUT connector on the CrowPanel, fed from the MAX3232 RS232-TTL
 // adapter. NOTE: GPIO16 (used on the previous esp32dev bring-up board) is the
 // GT911 touch I2C clock here and must not be reused for the ECU.

@@ -8,7 +8,7 @@ EcuDataProvider::EcuDataProvider(HardwareSerial& uart, EngineDataModel& model)
     : uart_(uart), model_(model), adapter_(uart) {}
 
 void EcuDataProvider::begin() {
-    begin(board::kEcuBaud, board::kEcuRxPin, board::kEcuTxPin);
+    begin(kEcuLinkBaud, board::kEcuRxPin, board::kEcuTxPin);
 }
 
 void EcuDataProvider::begin(uint32_t baud, int8_t rxPin, int8_t txPin) {

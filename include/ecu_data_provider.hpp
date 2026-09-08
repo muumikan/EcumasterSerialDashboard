@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "emu_serial_adapter.hpp"
+#include "ecu_link.hpp"
 #include "engine_data_model.hpp"
 
 namespace ecu {
@@ -28,7 +28,7 @@ public:
 private:
     HardwareSerial& uart_;
     EngineDataModel& model_;
-    EmuSerialAdapter adapter_;
+    EcuLinkAdapter adapter_;
 };
 
 }  // namespace ecu
