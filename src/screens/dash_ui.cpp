@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "dash_theme.hpp"
 #include "display.hpp"
@@ -54,6 +55,8 @@ void DashUi::begin(lv_obj_t* screen) {
     pages_[2] = &temps_;
     pages_[3] = &diagnostics_;
     pages_[4] = &setup_;
+
+    rtc_.begin();
 
     for (uint8_t i = 0; i < kPageCount; ++i) {
         pages_[i]->create(pageArea_);
@@ -124,12 +127,20 @@ void DashUi::buildChrome(lv_obj_t* screen) {
     latchBadge_ = lv_label_create(status);
     lv_label_set_text(latchBadge_, "");
     lv_obj_set_style_text_color(latchBadge_, theme::crit(), 0);
-    lv_obj_align(latchBadge_, LV_ALIGN_RIGHT_MID, -74, 0);
+    lv_obj_align(latchBadge_, LV_ALIGN_RIGHT_MID, -132, 0);
 
     linkText_ = lv_label_create(status);
     lv_label_set_text(linkText_, "OFFLINE");
     lv_obj_set_style_text_color(linkText_, theme::crit(), 0);
-    lv_obj_align(linkText_, LV_ALIGN_RIGHT_MID, -10, 0);
+    lv_obj_align(linkText_, LV_ALIGN_RIGHT_MID, -66, 0);
+
+    // The car's own instrument cluster has no clock, so this is the only one
+    // the driver gets. Minutes only: seconds would force a repaint every
+    // second for something nobody reads to that precision.
+    clockText_ = lv_label_create(status);
+    lv_label_set_text(clockText_, "--:--");
+    lv_obj_set_style_text_color(clockText_, theme::dim(), 0);
+    lv_obj_align(clockText_, LV_ALIGN_RIGHT_MID, -10, 0);
 
     // ---- page area ------------------------------------------------------
     pageArea_ = makePanel(screen, 0, theme::kChromeHeight, theme::kPageWidth, theme::kPageHeight);
@@ -355,11 +366,21 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
             lv_label_set_text(latchBadge_, badge);
         }
     }
+
+    char clock[sizeof(clockShown_)];
+    formatHm(rtc_.now(), clock, sizeof(clock));
+    if (strcmp(clock, clockShown_) != 0) {
+        memcpy(clockShown_, clock, sizeof(clockShown_));
+        lv_label_set_text(clockText_, clockShown_);
+        lv_obj_set_style_text_color(
+            clockText_, rtc_.now().valid ? theme::text() : theme::dim(), 0);
+    }
 }
 
 void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     const bool sweeping = runBootSweep(nowMs);
     const bool changed = model.revision() != lastRevision_;
+    const bool clockRead = rtc_.loop(nowMs);
 
     if (changed) {
         lastRevision_ = model.revision();
@@ -382,7 +403,9 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     const LinkState link = model.linkState(nowMs);
     updateSummary(link);
 
-    if (changed || lastLink_ != link) {
+    // The clock read is in the condition so the status bar keeps ticking even
+    // when the ECU has gone quiet.
+    if (changed || lastLink_ != link || clockRead) {
         updateStatusBar(model, nowMs);
         pages_[page_]->update(model, alarms_, peaks_, nowMs);
     }

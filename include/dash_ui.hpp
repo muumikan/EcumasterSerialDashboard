@@ -9,6 +9,7 @@
 #include "engine_data_model.hpp"
 #include "dash_settings.hpp"
 #include "main_screen.hpp"
+#include "rtc_clock.hpp"
 #include "settings_store.hpp"
 #include "setup_screen.hpp"
 #include "temps_screen.hpp"
@@ -65,6 +66,7 @@ private:
 
     AlarmEngine alarms_;
     RunPeaks peaks_;
+    RtcClock rtc_;
 
     DashSettings settings_;
     SettingsStore store_;
@@ -77,6 +79,7 @@ private:
     lv_obj_t* alarmText_ = nullptr;
     lv_obj_t* latchBadge_ = nullptr;
     lv_obj_t* linkText_ = nullptr;
+    lv_obj_t* clockText_ = nullptr;
     lv_obj_t* pageArea_ = nullptr;
 
     lv_obj_t* summary_ = nullptr;
@@ -90,6 +93,7 @@ private:
     LinkState lastLink_ = LinkState::Offline;
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
     uint8_t lastLatched_ = 0xFF;
+    char clockShown_[6] = {0};
     bool engineWasRunning_ = false;
 };
 
