@@ -167,11 +167,18 @@ implementation is the specification available.
   `wiring/signal-list.md` before anything is soldered.
 - **The ECUMASTER serial protocol must be enabled** in the EMU Classic Client
   and made permanent, or the port stays quiet.
-- **Not yet run against the car.** The firmware compiles and the layout is
-  fixed at 480 × 320, but nothing has been verified on the bench. Two things
-  to watch on the first flash: whether the LVGL object pool is large enough
-  (`LV_MEM_SIZE`, currently 96 kB), and whether swipe gestures bubble
-  correctly when the touch lands on a tile rather than the background.
+- **SD logging is untested.** It lives on the `feature/sd-logging` branch and
+  has never been run. The format question in
+  [emu-log-format.md](emu-log-format.md) is still open too.
+- **UI repaints at frame rate.** `DashUi` updates the visible page whenever the
+  model's revision changes, which at 19200 baud is a few hundred times a
+  second. LVGL coalesces the redraw, but the formatting work is done every
+  time. Rate-limiting to about 20 Hz would cut it by an order of magnitude and
+  make the digits readable rather than a blur.
+- **LVGL object pool headroom is unmeasured.** `LV_MEM_SIZE` is 96 kB. The
+  Setup page's Limits category builds the most objects of any screen; if it
+  ever comes up blank or the dash restarts on the way to it, that is the first
+  thing to raise.
 - **Enclosure dimensions are not verified.** `enclosure/case.scad` is
   parametric and its geometry is right, but the measurements at the top of the
   file are placeholders. They must be taken from Elecrow's STEP model or the

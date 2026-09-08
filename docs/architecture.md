@@ -5,11 +5,14 @@ and the protocol layer never learns about timing or pixels.** Each layer below
 only knows the one under it.
 
 ```
-        LVGL screens              DashUi, MainScreen, TuneScreen,
-              │                   TempsScreen, DiagnosticScreen, Tile
-              ▼
-        AlarmEngine ──────────┐   thresholds, one rule table
-              │               │
+        LVGL screens              DashUi, MainScreen, TuneScreen, TempsScreen,
+              │                   DiagnosticScreen, SetupScreen, Tile
+              │
+              │   DashSettings ◀──▶ SettingsStore (NVS)
+              │        │            numbers and flags only
+              ▼        ▼
+        AlarmEngine ──────────┐   one rule table, limits from settings
+              │               │   arming delay, hysteresis, latching
               ▼               ▼
         EngineDataModel ──────┘   snapshot in engineering units,
               │                   link health, revision counter
@@ -55,10 +58,15 @@ model. The seam between hardware and application state.
 Evaluates the snapshot against a fixed rule table: each rule gives a severity,
 a status-bar string, and the page that displays the value. Sitting beside the
 model rather than inside the screens means a threshold is changed in one place
-and all four pages agree.
+and all five pages agree.
 
-Two behaviours are deliberate: alarms are gated on RPM > 500, and a critical
-alarm requests its page only once, on the rising edge.
+Three behaviours are deliberate. Alarms arm only after the engine has been
+running for the arming delay, so cranking cannot trip them. Thresholds carry a
+deadband so a value on its limit does not flicker. And every trip is latched
+with its worst value and the RPM it happened at, because a half-second dip is
+exactly what a live-only display loses.
+
+No alarm ever changes the page.
 
 ### Screens — `src/screens/`, `src/diagnostics/`
 
@@ -71,6 +79,17 @@ the run peaks; they hold no thresholds and no protocol knowledge. `Tile` is
 the shared measurement cell and owns its own severity colouring.
 
 Only the visible page is updated, and only when the model's revision moves.
+
+### Settings — `src/settings/`
+
+`DashSettings` holds everything the driver can change: alarm limits and
+enables, the arming delay and deadband, shift points, backlight, auto-return
+and logging. `SettingsStore` keeps it in NVS as one versioned blob, so a
+firmware change that alters the struct falls back to defaults rather than
+reading old bytes as new fields.
+
+Only numbers and flags live there. Which value an alarm watches and which way
+it trips stays in the rule table in code.
 
 ### Display — `src/hal/`
 

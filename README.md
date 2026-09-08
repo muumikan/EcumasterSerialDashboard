@@ -101,7 +101,12 @@ shaped that way.
 
 ## Status
 
-Working: serial link, data model, alarm engine, all four pages, swipe
-navigation. Built and verified to compile; not yet run against the car.
+**Runs on the car.** First tested connected to the ECU on 8 September 2026:
+the link comes up, the pages behave, and the values read correctly as far as
+they have been checked. See [docs/test-results.md](docs/test-results.md).
+
+Working: serial link, data model, alarm engine, five pages, swipe navigation,
+settings in flash. SD logging exists on the `feature/sd-logging` branch and has
+not been tested yet.
 
 Open items are listed in [docs/decision-log.md](docs/decision-log.md).
