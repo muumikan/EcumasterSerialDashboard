@@ -2,8 +2,8 @@
 
 #include <Arduino.h>
 
+#include "ecu_link.hpp"
 #include "emu_log.hpp"
-#include "emu_serial_adapter.hpp"
 #include "engine_data_model.hpp"
 
 namespace ecu {
@@ -37,7 +37,7 @@ private:
     EmuLog log_;
     EmuLogTap tap_;
 
-    EmuSerialAdapter adapter_;
+    EcuLinkAdapter adapter_;
 };
 
 }  // namespace ecu

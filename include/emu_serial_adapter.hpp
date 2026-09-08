@@ -26,6 +26,11 @@ public:
 
     uint32_t bytesConsumed() const { return bytesConsumed_; }
 
+    // Always zero: the vendored decoder reports neither frames nor failures,
+    // so the classic link has no bad-frame count to give. Present so both
+    // adapters offer the same interface.
+    uint32_t badFrames() const { return 0; }
+
 private:
     Stream& stream_;
     EMUSerial emu_;

@@ -36,11 +36,17 @@ public:
     // Total number of accepted updates, for diagnostics.
     uint32_t updateCount() const { return updates_; }
 
+    // Frames the link threw away. Zero on the classic protocol, which cannot
+    // detect them; on EDL-1 a rising count means bytes are being lost upstream.
+    void noteBadFrames(uint32_t total) { badFrames_ = total; }
+    uint32_t badFrames() const { return badFrames_; }
+
 private:
     EngineSnapshot snapshot_{};
     uint32_t lastUpdateMs_ = 0;
     uint32_t revision_ = 0;
     uint32_t updates_ = 0;
+    uint32_t badFrames_ = 0;
     bool everUpdated_ = false;
 };
 

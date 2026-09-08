@@ -5,6 +5,36 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-08 — EDL-1 link, after the framing fix
+
+Firmware: `4c0b53b`, environment `crowpanel_advance_35_edl`. ECU reconfigured
+to stream the EDL-1 logger protocol.
+
+**Confirmed**
+
+- The EDL-1 stream decodes correctly. Values read right on screen.
+- **Bad frames stays at zero.** The 2048-byte receive buffer, the next-marker
+  check and the plausibility gate together hold the link clean under normal
+  running.
+- Communication described as faultless over the session.
+
+**What this replaces**
+
+The first EDL-1 attempt showed bursts of impossible values across several
+fields at once — CLT max 27472 C, oil pressure 15.9 bar, invented CEL flags.
+Root cause was the 256-byte default UART buffer being smaller than one
+260-byte frame. See the decision log.
+
+**Still untested on EDL-1**
+
+- Alarm behaviour across a real start, hysteresis, latching, run summary.
+- Settings surviving a power cycle.
+- Anything to do with SD logging.
+- Whether the bad-frame count stays at zero under load — a long card write or
+  a settings save is the case that would push it.
+
+---
+
 ## 2026-09-08 — first run connected to the ECU
 
 Firmware: `2bcd7a8` (five pages, settings in flash) on the CrowPanel Advance

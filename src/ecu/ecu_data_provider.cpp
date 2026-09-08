@@ -8,11 +8,17 @@ EcuDataProvider::EcuDataProvider(HardwareSerial& uart, EngineDataModel& model)
     : uart_(uart), model_(model), log_(), tap_(uart, log_), adapter_(tap_) {}
 
 void EcuDataProvider::begin() {
-    begin(board::kEcuBaud, board::kEcuRxPin, board::kEcuTxPin);
+    begin(kEcuLinkBaud, board::kEcuRxPin, board::kEcuTxPin);
     log_.begin();
 }
 
 void EcuDataProvider::begin(uint32_t baud, int8_t rxPin, int8_t txPin) {
+    // The Arduino default is 256 bytes, which is smaller than one 260-byte
+    // EDL-1 frame and only ~22 ms of slack at 115200. Any redraw, card write
+    // or NVS save that holds the loop longer than that drops bytes, and a
+    // dropped byte splices two frames together - which reads as a burst of
+    // impossible values across many fields at once. Must be set before begin().
+    uart_.setRxBufferSize(2048);
     uart_.begin(baud, SERIAL_8N1, rxPin, txPin);
 }
 

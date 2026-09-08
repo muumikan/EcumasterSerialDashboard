@@ -4,3 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 .DS_Store
+
+# macOS / iCloud conflict copies ("file 2.cpp", "file 3.cpp"). They break the
+# build if compiled - PlatformIO globs the filesystem, not the git index.
+* [0-9].*

@@ -19,14 +19,37 @@ only knows the one under it.
               ▼
         EcuDataProvider           owns UART1, stamps arrival times
               ▼
-        EmuSerialAdapter          the only file that includes EMUSerial.h
-              ▼
+        EcuLinkAdapter            EmuSerialAdapter (classic, 34 channels)
+                                  EdlSerialAdapter (EDL-1, 195 channels)
+              ▼                   chosen at build time by ecu_link.hpp
         UART1  ◀── MAX3232 ◀── EMU Classic
 ```
 
 ## The layers
 
-### EmuSerialAdapter — `src/protocol/`
+### Adapters — `src/protocol/`
+
+Two, for the EMU's two serial protocols, behind one interface. `ecu_link.hpp`
+picks between them at build time and supplies the matching baud rate; nothing
+above this layer knows which is in use. This is the seam the layering existed
+for, and swapping protocols cost no change to the model, the alarms, the
+screens or the settings.
+
+#### EdlSerialAdapter
+
+The EDL-1 logger stream: 260-byte frames at 115200 carrying all 195 channels
+from one instant. Field extraction comes from the vendored
+[ThiloZ/EDLSerial](https://github.com/ThiloZ/EDLSerial) (MIT); framing is done
+here, because the protocol carries no checksum and the library's own
+resynchronisation is wrong.
+
+Three things earn the confidence a checksum would otherwise give: a one-byte
+sliding window to find the marker, a refusal to accept a frame until the next
+marker appears exactly 260 bytes later, and a plausibility check that rejects
+values which cannot be real. The adapter keeps the last *good* frame rather
+than the last frame, so a bad sample never reaches the run peaks.
+
+#### EmuSerialAdapter
 
 Wraps [GTO2013/EMUSerial](https://github.com/GTO2013/EMUSerial) unmodified and
 translates its `emu_data_t` into `EngineSnapshot`. Nothing is re-scaled here:
@@ -37,7 +60,8 @@ includes `EMUSerial.h`.
 It reports bytes consumed rather than frames decoded, because
 `checkEmuSerial()` returns nothing and `decodeEmuFrame` is private. That byte
 count is what liveness is derived from — see the caveat in
-[decision-log.md](decision-log.md).
+[decision-log.md](decision-log.md). Its bad-frame count is always zero for the
+same reason: the decoder surfaces no failures to count.
 
 ### EngineDataModel — `src/data_model/`
 
