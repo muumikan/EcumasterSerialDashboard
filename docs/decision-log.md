@@ -20,6 +20,43 @@ What remains is the quiet version: colour where the value lives, one line of
 text that follows you across pages, and the page changes only when a thumb
 changes it.
 
+## Settings live in flash, and only numbers live there
+
+The setup page edits an `AlarmSettings`/`DashSettings` struct saved to NVS as
+one versioned blob. Which value an alarm watches and which way it trips stays
+in the rule table in code.
+
+That line matters. A settings page that can rewire logic is a settings page
+that can brick the dash on a dark road; one that can only move numbers cannot
+produce a state the code has not already been written to handle. The stored
+record carries a magic word and a version, and a mismatch falls back to
+defaults rather than reinterpreting old bytes as new fields.
+
+The page stays editable with the engine running. Locking it while stopped was
+the first design and it was wrong: setting an oil pressure limit without
+watching the live value it guards is exactly the guesswork the page exists to
+end.
+
+## Alarms arm on a delay, not on RPM alone
+
+Gating on RPM > 500 alone fired on every start. Cranking crosses 500 rpm while
+oil pressure is still building and the battery is still down from the starter,
+so two critical alarms went off every time the engine caught - the fastest
+possible way to teach a driver that red means nothing.
+
+The engine now has to have been running for the arming delay, three seconds by
+default, and the status bar counts it down rather than going silently quiet.
+
+## Thresholds carry a deadband, and trips latch
+
+A value resting on its limit flickered its cell at the frame rate. An alarm now
+trips at the limit and clears only once the value has moved back past it by the
+hysteresis share.
+
+Latching matters more. A half-second oil pressure dip in a corner is the event
+most worth knowing about and the one a live-only display loses completely. Each
+alarm keeps its worst moment - value and RPM - until the run ends.
+
 ## Alarms are gated on RPM > 500
 
 With the key on and the engine stopped, oil pressure reads 0 bar and battery

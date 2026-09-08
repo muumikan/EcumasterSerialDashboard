@@ -7,15 +7,18 @@
 #include "dash_page.hpp"
 #include "diagnostic_screen.hpp"
 #include "engine_data_model.hpp"
+#include "dash_settings.hpp"
 #include "main_screen.hpp"
+#include "settings_store.hpp"
+#include "setup_screen.hpp"
 #include "temps_screen.hpp"
 #include "tune_screen.hpp"
 
 namespace ecu {
 
-// Return to the driving page after this long without a touch, so the dash is
-// never left showing diagnostics on the move.
-constexpr uint32_t kIdleReturnMs = 30000;
+// Edits are collected and written to flash this long after the last one, so a
+// held + button costs one NVS write rather than twenty.
+constexpr uint32_t kSettingsSaveDelayMs = 4000;
 
 // How long the shift lights sweep at power-up, the way a race dash does.
 constexpr uint32_t kBootSweepMs = 900;
@@ -37,11 +40,15 @@ public:
     void noteInteraction(uint32_t nowMs) { lastInteractionMs_ = nowMs; }
     void dismissSummary();
 
+    // Applies the current settings everywhere and schedules a save.
+    void settingsChanged();
+
 private:
-    static constexpr uint8_t kPageCount = 4;
+    static constexpr uint8_t kPageCount = 5;
     static constexpr uint8_t kShiftSegments = 14;
 
     void buildChrome(lv_obj_t* screen);
+    void applySettings();
     void buildSummary(lv_obj_t* screen);
     void updateSummary(uint32_t nowMs);
     void setShiftSegments(uint8_t lit);
@@ -53,10 +60,16 @@ private:
     TuneScreen tune_;
     TempsScreen temps_;
     DiagnosticScreen diagnostics_;
+    SetupScreen setup_;
     DashPage* pages_[kPageCount] = {};
 
     AlarmEngine alarms_;
     RunPeaks peaks_;
+
+    DashSettings settings_;
+    SettingsStore store_;
+    bool settingsDirty_ = false;
+    uint32_t saveDueMs_ = 0;
 
     lv_obj_t* shift_[kShiftSegments] = {};
     lv_obj_t* dots_[kPageCount] = {};

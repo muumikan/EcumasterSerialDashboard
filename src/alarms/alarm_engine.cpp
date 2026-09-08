@@ -70,7 +70,7 @@ AlarmSettings defaultAlarmSettings() {
     s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 3.2f,  2.6f,  true };
     s.limits[static_cast<uint8_t>(AlarmId::IntakeAir)]    = { 65.0f, 75.0f, true };
 
-    s.armDelayMs = 3000;
+    s.armDelayS = 3;
     s.hysteresisPercent = 2;
     return s;
 }
@@ -83,13 +83,14 @@ void AlarmEngine::evaluate(const EngineSnapshot& s, uint32_t nowMs) {
     }
     wasRunning_ = running_;
 
+    const uint32_t delayMs = static_cast<uint32_t>(settings_.armDelayS) * 1000u;
     if (!running_) {
         armed_ = false;
-        armingRemainingMs_ = settings_.armDelayMs;
+        armingRemainingMs_ = delayMs;
     } else {
         const uint32_t up = nowMs - runningSinceMs_;
-        armed_ = up >= settings_.armDelayMs;
-        armingRemainingMs_ = armed_ ? 0 : settings_.armDelayMs - up;
+        armed_ = up >= delayMs;
+        armingRemainingMs_ = armed_ ? 0 : delayMs - up;
     }
 
     worst_ = AlarmSeverity::None;

@@ -15,4 +15,8 @@ bool begin();
 // Runs LVGL's task handler. Call from the main loop.
 void loop();
 
+// Backlight level, 0-100 %. Driven by PWM, so night mode is a real dimming of
+// the panel rather than a darker palette.
+void setBrightness(uint8_t percent);
+
 }  // namespace display

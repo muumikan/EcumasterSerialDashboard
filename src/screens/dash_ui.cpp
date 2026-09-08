@@ -1,17 +1,14 @@
 #include "dash_ui.hpp"
 
+#include <Arduino.h>
 #include <stdio.h>
 
 #include "dash_theme.hpp"
+#include "display.hpp"
 #include "ui_tile.hpp"
 
 namespace ecu {
 namespace {
-
-// Shift lights: first segment at this rpm, all lit (and the last three red)
-// by the time the engine is at the limiter.
-constexpr uint16_t kShiftFirstRpm = 3500;
-constexpr uint16_t kShiftLastRpm = 7200;
 
 void gestureCb(lv_event_t* event) {
     DashUi* ui = static_cast<DashUi*>(lv_event_get_user_data(event));
@@ -35,9 +32,17 @@ void summaryTapCb(lv_event_t* event) {
     static_cast<DashUi*>(lv_event_get_user_data(event))->dismissSummary();
 }
 
+void settingsChangedCb(void* context) {
+    static_cast<DashUi*>(context)->settingsChanged();
+}
+
 }  // namespace
 
 void DashUi::begin(lv_obj_t* screen) {
+    if (!store_.load(settings_)) {
+        Serial.println(F("settings: no stored record, using defaults"));
+    }
+
     lv_obj_set_style_bg_color(screen, theme::bg(), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
     lv_obj_set_style_pad_all(screen, 0, 0);
@@ -46,10 +51,13 @@ void DashUi::begin(lv_obj_t* screen) {
 
     buildChrome(screen);
 
+    setup_.bind(&settings_, settingsChangedCb, this);
+
     pages_[0] = &drive_;
     pages_[1] = &tune_;
     pages_[2] = &temps_;
     pages_[3] = &diagnostics_;
+    pages_[4] = &setup_;
 
     for (uint8_t i = 0; i < kPageCount; ++i) {
         pages_[i]->create(pageArea_);
@@ -59,9 +67,27 @@ void DashUi::begin(lv_obj_t* screen) {
     lv_obj_add_event_cb(screen, gestureCb, LV_EVENT_GESTURE, this);
     lv_obj_add_event_cb(screen, pressedCb, LV_EVENT_PRESSED, this);
 
+    applySettings();
+
     // The driving page is what the car powers up into.
     showPage(0);
-    bootSweepEndMs_ = lv_tick_get() + kBootSweepMs;
+    if (settings_.bootSweep) {
+        bootSweepEndMs_ = lv_tick_get() + kBootSweepMs;
+    }
+}
+
+void DashUi::applySettings() {
+    alarms_.settings() = settings_.alarms;
+    display::setBrightness(settings_.nightMode ? settings_.nightBrightnessPct
+                                               : settings_.brightnessPct);
+    litSegments_ = 0xFF;  // shift points may have moved; force a repaint
+}
+
+void DashUi::settingsChanged() {
+    applySettings();
+    settingsDirty_ = true;
+    saveDueMs_ = lv_tick_get() + kSettingsSaveDelayMs;
+    lastInteractionMs_ = lv_tick_get();
 }
 
 void DashUi::buildChrome(lv_obj_t* screen) {
@@ -212,12 +238,22 @@ void DashUi::showPage(uint8_t index) {
 }
 
 void DashUi::setShiftSegments(uint8_t lit) {
+    // Where the strip turns red follows the configured red zone rather than a
+    // fixed number of segments, so moving the red line moves the colours too.
+    const uint16_t span =
+        settings_.shiftAllRpm > settings_.shiftFirstRpm
+            ? static_cast<uint16_t>(settings_.shiftAllRpm - settings_.shiftFirstRpm)
+            : 1;
+    int redFrom = ((settings_.shiftRedRpm - settings_.shiftFirstRpm) * kShiftSegments) / span;
+    if (redFrom < 1) redFrom = 1;
+    if (redFrom > kShiftSegments) redFrom = kShiftSegments;
+
     for (uint8_t i = 0; i < kShiftSegments; ++i) {
         lv_color_t color = theme::track();
         if (i < lit) {
-            if (i >= kShiftSegments - 3) {
+            if (i >= redFrom) {
                 color = theme::crit();
-            } else if (i >= kShiftSegments - 7) {
+            } else if (i >= redFrom - 4) {
                 color = theme::warn();
             } else {
                 color = theme::good();
@@ -262,8 +298,9 @@ bool DashUi::runBootSweep(uint32_t nowMs) {
 
 void DashUi::updateShiftLights(uint16_t rpm) {
     int lit = 0;
-    if (rpm > kShiftFirstRpm) {
-        lit = ((rpm - kShiftFirstRpm) * kShiftSegments) / (kShiftLastRpm - kShiftFirstRpm);
+    if (rpm > settings_.shiftFirstRpm && settings_.shiftAllRpm > settings_.shiftFirstRpm) {
+        lit = ((rpm - settings_.shiftFirstRpm) * kShiftSegments) /
+              (settings_.shiftAllRpm - settings_.shiftFirstRpm);
         if (lit > kShiftSegments) lit = kShiftSegments;
     }
     if (static_cast<uint8_t>(lit) == litSegments_) {
@@ -338,8 +375,16 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     }
 
     // Idle timeout: never leave a non-driving page up on the move.
-    if (page_ != 0 && (nowMs - lastInteractionMs_) > kIdleReturnMs) {
+    if (settings_.idleReturnS != 0 && page_ != 0 &&
+        (nowMs - lastInteractionMs_) > settings_.idleReturnS * 1000u) {
         showPage(0);
+    }
+
+    // Edits are written once the driver stops adjusting, not per button press.
+    if (settingsDirty_ && static_cast<int32_t>(nowMs - saveDueMs_) >= 0) {
+        settingsDirty_ = false;
+        store_.save(settings_);
+        Serial.println(F("settings: saved"));
     }
 
     if (changed) {

@@ -46,7 +46,7 @@ struct AlarmSettings {
     // Cranking crosses 500 rpm while oil pressure is still building and the
     // battery is still down from the starter; without this, every start fires
     // two critical alarms and teaches the driver to ignore red.
-    uint16_t armDelayMs;
+    uint8_t armDelayS;
 
     // Deadband, as a share of the limit. An alarm trips at the limit and only
     // clears once the value has moved back past it by this much, so a value
