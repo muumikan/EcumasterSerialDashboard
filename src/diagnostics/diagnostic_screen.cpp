@@ -65,7 +65,7 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     state_ = makeRow(left, 18, "State");
     age_ = makeRow(left, 18 + kRowHeight, "Age");
     updates_ = makeRow(left, 18 + kRowHeight * 2, "Updates");
-    revision_ = makeRow(left, 18 + kRowHeight * 3, "Revision");
+    badFrames_ = makeRow(left, 18 + kRowHeight * 3, "Bad frames");
 
     // What tripped, kept after the condition cleared. A dip that lasted half a
     // corner is exactly what a live-only display loses.
@@ -127,8 +127,10 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     snprintf(text, sizeof(text), "%lu", static_cast<unsigned long>(model.updateCount()));
     lv_label_set_text(updates_, text);
 
-    snprintf(text, sizeof(text), "%lu", static_cast<unsigned long>(model.revision()));
-    lv_label_set_text(revision_, text);
+    const uint32_t bad = model.badFrames();
+    snprintf(text, sizeof(text), "%lu", static_cast<unsigned long>(bad));
+    lv_label_set_text(badFrames_, text);
+    lv_obj_set_style_text_color(badFrames_, bad > 0 ? theme::warn() : theme::text(), 0);
 
     snprintf(text, sizeof(text), "0x%04X", static_cast<unsigned>(s.celFlags));
     lv_label_set_text(cel_, text);

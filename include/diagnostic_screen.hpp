@@ -19,7 +19,7 @@ private:
     lv_obj_t* state_ = nullptr;
     lv_obj_t* age_ = nullptr;
     lv_obj_t* updates_ = nullptr;
-    lv_obj_t* revision_ = nullptr;
+    lv_obj_t* badFrames_ = nullptr;
     lv_obj_t* cel_ = nullptr;
     lv_obj_t* celBits_[11] = {};
 
