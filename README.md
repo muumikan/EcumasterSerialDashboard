@@ -16,7 +16,7 @@ and the ECU's extension port is a one-way stream in the first place.
 | Memory | 16 MB flash, 8 MB octal PSRAM |
 | Level shifter | MAX3232 (RS-232 ↔ 3.3 V TTL) |
 | ECU | Ecumaster EMU Classic, firmware 1.211 |
-| Link | 19200 baud, 8N1, one direction only |
+| Link | EDL-1 logger stream, 115200 baud, 8N1, one direction only |
 | ECU port | EMU Classic extension port (replaces the BT Module) |
 
 The dashboard replaces the Ecumaster BT Module on the EMU Classic's extension
@@ -66,15 +66,35 @@ watching the value it guards is guesswork.
 At power-up the dash opens on Drive and sweeps the shift lights, so every
 segment is confirmed working before the car moves.
 
+## Two protocols
+
+The EMU can stream either of two serial protocols, and the dashboard reads
+both. Which one is built is a compile-time choice, because they differ in baud
+rate and framing and the ECU is configured for one or the other.
+
+| | Classic | **EDL-1** |
+|---|---|---|
+| Environment | `crowpanel_advance_35` | `crowpanel_advance_35_edl` |
+| Baud | 19200 | 115200 |
+| Frame | 5 bytes, one channel | 260 bytes, every channel |
+| Channels | 34 | **195** |
+| Samples | channels arrive apart | all from one instant |
+
+EDL-1 is what the car runs and what a bare `pio run` builds. Everything above
+the adapter — model, alarms, screens, settings — is identical either way.
+
+The extra channels are listed in [docs/edl-channels.md](docs/edl-channels.md);
+most are not on screen yet.
+
 ## Building
 
-The project uses [PlatformIO](https://platformio.org/). There is one
-environment, `crowpanel_advance_35`.
+The project uses [PlatformIO](https://platformio.org/).
 
 ```bash
-pio run                 # build
-pio run -t upload       # build and flash over USB-C
-pio device monitor      # 115200 baud USB CDC console
+pio run                                          # build the default (EDL-1)
+pio run -t upload                                # build and flash over USB-C
+pio run -e crowpanel_advance_35 -t upload        # the classic protocol instead
+pio device monitor                               # 115200 baud USB CDC console
 ```
 
 If `pio` is not on your `PATH`, it lives at `~/.platformio/penv/bin/pio`.
@@ -105,12 +125,13 @@ shaped that way.
 
 ## Status
 
-**Runs on the car.** First tested connected to the ECU on 8 September 2026:
-the link comes up, the pages behave, and the values read correctly as far as
-they have been checked. See [docs/test-results.md](docs/test-results.md).
+**Runs on the car.** Tested connected to the ECU on 8 September 2026, on both
+protocols. On EDL-1 the link runs clean with no dropped frames. See
+[docs/test-results.md](docs/test-results.md).
 
-Working: serial link, data model, alarm engine, five pages, swipe navigation,
-settings in flash. SD logging exists on the `feature/sd-logging` branch and has
-not been tested yet.
+Working: both serial protocols, data model, alarm engine, five pages, swipe
+navigation, settings in flash. SD logging exists on the `feature/sd-logging`
+branch; it writes a file, but that file does not open in EMU Classic Client —
+see [docs/emu-log-format.md](docs/emu-log-format.md) on that branch.
 
 Open items are listed in [docs/decision-log.md](docs/decision-log.md).

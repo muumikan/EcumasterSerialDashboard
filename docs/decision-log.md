@@ -20,6 +20,52 @@ What remains is the quiet version: colour where the value lives, one line of
 text that follows you across pages, and the page changes only when a thumb
 changes it.
 
+## The EDL-1 protocol replaced the classic one
+
+The EMU streams either its classic serial protocol or the EDL-1 logger
+protocol. The classic one sends 34 channels, one per 5-byte frame at 19200,
+which means values arrive at different moments and have to be assembled into
+something that never existed as a single sample. EDL-1 sends 260 bytes at
+115200 carrying all 195 channels from one instant.
+
+Three reasons, any one of which would have been enough: nearly six times the
+channels, a genuine simultaneous sample rather than a rolling reconstruction,
+and - the one that matters for logging - the same stream an EDL-1 datalogger
+receives before writing the `.bgc` files EMU Classic Client opens.
+
+Both live in the tree behind one interface, chosen at build time by
+`ecu_link.hpp`, because they differ in baud and framing and the ECU is
+configured for one or the other. The default build is EDL-1, since that is
+what the car is set up for; building classic against an EDL-1 ECU produces a
+dashboard that shows nothing.
+
+Adopting it cost no change above the adapter layer. That was the point of
+having one.
+
+## Framing has to do the work a checksum would
+
+The EDL-1 protocol carries no checksum. On the first drive that showed as
+bursts of impossible values across several fields at once - a coolant maximum
+of 27472 C, oil pressure at 15.9 bar, invented check-engine flags.
+
+Several fields wrong at the same moment is the signature of a misaligned
+frame, not a faulty sensor, and the cause was mundane: Arduino's default UART
+receive buffer is 256 bytes, smaller than a single 260-byte frame and about
+22 ms of slack at 115200. Any redraw or flash write that held the loop longer
+dropped bytes, and a dropped byte splices two frames into one that still opens
+with a valid marker.
+
+The buffer is now 2048 bytes, and three checks stand behind it because the
+loop will stall again eventually: a one-byte sliding window rather than the
+vendored library's discard-everything approach, which preserves a phase error
+forever; a refusal to accept a frame until the next marker lands exactly 260
+bytes later, which is the thing a splice cannot fake; and a plausibility gate
+using Ecumaster's own `maxLimit` values.
+
+The last piece matters most in practice. The adapter keeps the last *good*
+frame rather than the last frame. One bad sample used to be permanent, because
+it went straight into the run peaks and stayed there for the rest of the drive.
+
 ## The page changes only when a thumb changes it
 
 Two mechanisms used to move it on their own, and both are gone.
@@ -206,12 +252,15 @@ implementation is the specification available.
   `wiring/signal-list.md` before anything is soldered.
 - **The ECUMASTER serial protocol must be enabled** in the EMU Classic Client
   and made permanent, or the port stays quiet.
-- **The format tables are 1.200; the ECU runs 1.211.** Only channel 33 is
-  affected and nothing displays it, so nothing on screen is wrong today. The
-  full analysis is in [ecu-protocol.md](ecu-protocol.md#version-mismatch-channel-33)
-  and the 1.211 file is kept in [ecu-formats/](ecu-formats/). Deliberately not
-  adopted yet: the ECU is going to be updated to a newer firmware first, and
-  the tables must match whatever is actually flashed in it.
+- **The 1.200/1.211 channel 33 mismatch is moot on EDL-1**, which carries
+  `afrTarget` and `scondarypulseWidth` as separate fields at fixed offsets. It
+  still applies to the classic environment; see
+  [ecu-protocol.md](ecu-protocol.md#version-mismatch-channel-33).
+- **The check-engine bit numbering is an inference.** Confirm it by unplugging
+  the intake air sensor and checking that IAT is the flag that lights.
+- **160 EDL-1 channels are decoded but not displayed.** Listed in
+  [edl-channels.md](edl-channels.md); boost control, knock-versus-noise,
+  trigger health and idle control are the ones this car can actually use.
 - **SD logging is untested.** It lives on the `feature/sd-logging` branch and
   has never been run. The format question in
   [emu-log-format.md](emu-log-format.md) is still open too.

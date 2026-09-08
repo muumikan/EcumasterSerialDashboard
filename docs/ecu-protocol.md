@@ -1,5 +1,13 @@
 # EMU Classic serial protocol
 
+> This describes the **classic** protocol, one channel per 5-byte frame. The
+> car now runs the **EDL-1** protocol instead: 260-byte frames carrying all 195
+> channels at once. Both are in the tree, chosen at build time. The EDL-1
+> framing and its lack of a checksum are covered in
+> [architecture.md](architecture.md) and the
+> [decision log](decision-log.md); its channels are listed in
+> [edl-channels.md](edl-channels.md).
+
 **This project does not implement the protocol.** It uses
 [GTO2013/EMUSerial](https://github.com/GTO2013/EMUSerial), vendored unmodified
 in `lib/EMUSerial-master/`, as the reference decoder. This document describes
