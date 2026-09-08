@@ -52,8 +52,19 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     updates_ = makeRow(left, 18 + kRowHeight * 2, "Updates");
     revision_ = makeRow(left, 18 + kRowHeight * 3, "Revision");
 
-    makeHeading(left, 18 + kRowHeight * 4 + 8, "CEL FLAGS");
-    cel_ = makeRow(left, 18 + kRowHeight * 5 + 8, "Raw");
+    // What tripped, kept after the condition cleared. A dip that lasted half a
+    // corner is exactly what a live-only display loses.
+    makeHeading(left, 94, "LATCHED THIS RUN");
+    for (int i = 0; i < 3; ++i) {
+        lv_obj_t* row = lv_label_create(left);
+        lv_label_set_text(row, "");
+        lv_obj_set_style_text_color(row, theme::dim(), 0);
+        lv_obj_align(row, LV_ALIGN_TOP_LEFT, 0, 112 + i * 14);
+        latched_[i] = row;
+    }
+
+    makeHeading(left, 162, "CEL FLAGS");
+    cel_ = makeRow(left, 180, "Raw");
 
     // Bit positions only - the EMU firmware's bit-to-fault mapping is not in
     // the reference implementation, so nothing here claims to name them.
@@ -63,7 +74,7 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
         snprintf(text, sizeof(text), "%d", i);
         lv_label_set_text(bit, text);
         lv_obj_set_style_text_color(bit, theme::dotOff(), 0);
-        lv_obj_align(bit, LV_ALIGN_TOP_LEFT, (i % 8) * 27, 18 + kRowHeight * 6 + 12 + (i / 8) * 18);
+        lv_obj_align(bit, LV_ALIGN_TOP_LEFT, (i % 8) * 27, 200 + (i / 8) * 16);
         celBits_[i] = bit;
     }
 
@@ -84,9 +95,8 @@ void DiagnosticScreen::update(const EngineDataModel& model,
                               const AlarmEngine& alarms,
                               const RunPeaks& peaks,
                               uint32_t nowMs) {
-    (void)alarms;
     const EngineSnapshot& s = model.snapshot();
-    char text[24];
+    char text[40];  // latched lines are the longest thing formatted here
 
     const LinkState link = model.linkState(nowMs);
     lv_label_set_text(state_, toString(link));
@@ -116,6 +126,32 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     for (int i = 0; i < 16; ++i) {
         const bool set = (s.celFlags >> i) & 0x1;
         lv_obj_set_style_text_color(celBits_[i], set ? theme::crit() : theme::dotOff(), 0);
+    }
+
+    // Show the three most recent, newest last, and only redraw when the list
+    // actually grows.
+    const uint8_t count = alarms.latchedCount();
+    if (count != lastLatchedCount_) {
+        lastLatchedCount_ = count;
+
+        const uint8_t shown = count < 3 ? count : 3;
+        const uint8_t first = count - shown;
+
+        for (int i = 0; i < 3; ++i) {
+            if (i >= shown) {
+                lv_label_set_text(latched_[i], i == 0 ? "none" : "");
+                lv_obj_set_style_text_color(latched_[i], theme::dotOff(), 0);
+                continue;
+            }
+            const LatchedAlarm& hit = alarms.latched(static_cast<uint8_t>(first + i));
+            snprintf(text, sizeof(text), "%s %.*f %s @ %u",
+                     hit.label, hit.decimals, hit.value, hit.unit,
+                     static_cast<unsigned>(hit.rpm));
+            lv_label_set_text(latched_[i], text);
+            lv_obj_set_style_text_color(
+                latched_[i],
+                hit.severity == AlarmSeverity::Critical ? theme::crit() : theme::warn(), 0);
+        }
     }
 
     if (!peaks.seeded) {

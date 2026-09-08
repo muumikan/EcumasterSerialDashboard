@@ -97,6 +97,11 @@ void DashUi::buildChrome(lv_obj_t* screen) {
     lv_obj_set_style_text_color(alarmText_, theme::dim(), 0);
     lv_obj_align(alarmText_, LV_ALIGN_CENTER, 0, 0);
 
+    latchBadge_ = lv_label_create(status);
+    lv_label_set_text(latchBadge_, "");
+    lv_obj_set_style_text_color(latchBadge_, theme::crit(), 0);
+    lv_obj_align(latchBadge_, LV_ALIGN_RIGHT_MID, -74, 0);
+
     linkText_ = lv_label_create(status);
     lv_label_set_text(linkText_, "OFFLINE");
     lv_obj_set_style_text_color(linkText_, theme::crit(), 0);
@@ -208,8 +213,33 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
         lv_obj_set_style_text_color(alarmText_, alarmColor, 0);
     }
 
-    lv_label_set_text(alarmText_, alarms_.engineRunning() ? alarms_.worstText() : "ENGINE OFF");
+    // Arming is shown, not hidden: the driver should be able to see that the
+    // dash is deliberately quiet for a few seconds rather than asleep.
+    char text[24];
+    const char* line = "ENGINE OFF";
+    if (alarms_.engineRunning()) {
+        if (alarms_.armed()) {
+            line = alarms_.worstText();
+        } else {
+            snprintf(text, sizeof(text), "ARMING %us",
+                     static_cast<unsigned>(alarms_.armingRemainingS()));
+            line = text;
+        }
+    }
+    lv_label_set_text(alarmText_, line);
     lv_obj_align(alarmText_, LV_ALIGN_CENTER, 0, 0);
+
+    const uint8_t latched = alarms_.latchedCount();
+    if (latched != lastLatched_) {
+        lastLatched_ = latched;
+        if (latched == 0) {
+            lv_label_set_text(latchBadge_, "");
+        } else {
+            char badge[8];
+            snprintf(badge, sizeof(badge), "! %u", static_cast<unsigned>(latched));
+            lv_label_set_text(latchBadge_, badge);
+        }
+    }
 }
 
 void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
@@ -218,7 +248,7 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
 
     if (changed) {
         lastRevision_ = model.revision();
-        alarms_.evaluate(model.snapshot());
+        alarms_.evaluate(model.snapshot(), nowMs);
         peaks_.record(model.snapshot());
         if (!sweeping) {
             updateShiftLights(model.snapshot().rpm);

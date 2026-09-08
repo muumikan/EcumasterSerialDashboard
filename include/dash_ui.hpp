@@ -59,6 +59,7 @@ private:
     lv_obj_t* dots_[kPageCount] = {};
     lv_obj_t* pageName_ = nullptr;
     lv_obj_t* alarmText_ = nullptr;
+    lv_obj_t* latchBadge_ = nullptr;
     lv_obj_t* linkText_ = nullptr;
     lv_obj_t* pageArea_ = nullptr;
 
@@ -69,6 +70,7 @@ private:
     uint32_t lastInteractionMs_ = 0;
     LinkState lastLink_ = LinkState::Offline;
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
+    uint8_t lastLatched_ = 0xFF;
 };
 
 }  // namespace ecu

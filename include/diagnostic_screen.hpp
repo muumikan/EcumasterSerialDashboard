@@ -23,6 +23,10 @@ private:
     lv_obj_t* cel_ = nullptr;
     lv_obj_t* celBits_[16] = {};
 
+    // The three most recent alarms that tripped during this run.
+    lv_obj_t* latched_[3] = {};
+    uint8_t lastLatchedCount_ = 0xFF;
+
     // Peaks column.
     lv_obj_t* peakValues_[11] = {};
 };
