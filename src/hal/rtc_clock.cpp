@@ -106,21 +106,40 @@ bool RtcClock::begin() {
         }
     }
     present_ = true;
+    readTime(now_);
 
-    if (seconds & kVoltageLowBit) {
-        // The oscillator stopped, so whatever the registers hold is not a time.
-        // This is the only write this driver ever makes. Seeding on every boot
-        // instead would drag the clock back to the build moment each time the
-        // board is reflashed, and again on every start after that.
-        const DateTime seed = buildTime();
+    // Two triggers, because one is not enough.
+    //
+    // VL says the oscillator stopped. It does NOT say the time is right: a
+    // part kept alive by its backup cell since the factory has a clock that
+    // has been running happily and has never been set, and VL is clear the
+    // whole time. That is exactly what this board turned out to have - the
+    // display read 00:24 while the firmware that read it was compiled at
+    // 19:44.
+    //
+    // So the second trigger is plausibility: a clock cannot legitimately read
+    // earlier than the moment the firmware reading it was compiled. Anything
+    // that does has never been set, and gets set now. Once seeded the RTC runs
+    // ahead of the build time, so this does not fire again on later boots -
+    // and a newer firmware flashed over it leaves a correct clock alone.
+    const DateTime seed = buildTime();
+    const bool stopped = (seconds & kVoltageLowBit) != 0;
+    const bool implausible = now_.valid && seed.valid && isBefore(now_, seed);
+
+    if (stopped || implausible) {
+        const char* reason = stopped ? "oscillator had stopped"
+                                     : "stored time predated this build";
         if (seed.valid && writeTime(seed)) {
-            Serial.println(F("rtc: time was lost, seeded from the build clock"));
+            readTime(now_);
+            Serial.print(F("rtc: seeded from the build clock ("));
+            Serial.print(reason);
+            Serial.println(')');
         } else {
-            Serial.println(F("rtc: time was lost and could not be seeded"));
+            Serial.print(F("rtc: time is not set and could not be seeded ("));
+            Serial.print(reason);
+            Serial.println(')');
         }
     }
-
-    readTime(now_);
     nextReadMs_ = millis() + kReadIntervalMs;
 
     char shown[9];

@@ -22,6 +22,10 @@ struct DateTime {
     bool valid = false;
 };
 
+// True when `a` is strictly earlier than `b`. Only meaningful for two valid
+// timestamps; an invalid one compares as if it were the start of time.
+bool isBefore(const DateTime& a, const DateTime& b);
+
 // "14:41", or "--:--" when the time is not known. Needs 6 bytes.
 void formatHm(const DateTime& t, char* out, size_t len);
 
