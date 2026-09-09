@@ -59,6 +59,17 @@ constexpr int8_t kLcdBacklightPin = 38;
 constexpr uint32_t kLcdSpiWriteHz = 40000000;
 constexpr uint32_t kLcdSpiReadHz = 16000000;
 
+// --------------------------------------------------------------- SD card --
+// microSD slot on its own SPI bus (HSPI), separate from the display's SPI2.
+// From Elecrow's lesson-04 SD example. The chip-select line is not routed to a
+// GPIO on this board - the card is permanently selected - but the Arduino SD
+// API still requires a pin argument, so a spare one is passed.
+constexpr int8_t kSdMosiPin = 6;
+constexpr int8_t kSdMisoPin = 4;
+constexpr int8_t kSdSckPin = 5;
+constexpr int8_t kSdCsPin = 7;  // not connected to IO; placeholder for the API
+constexpr uint32_t kSdSpiHz = 80000000;
+
 // ------------------------------------------------------------------- Touch --
 // GT911 capacitive controller. Shares I2C0 with the on-board RTC.
 constexpr int8_t kTouchSdaPin = 15;

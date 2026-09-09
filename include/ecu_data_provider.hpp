@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "ecu_link.hpp"
+#include "emu_log.hpp"
 #include "engine_data_model.hpp"
 
 namespace ecu {
@@ -25,9 +26,17 @@ public:
 
     uint32_t bytesConsumed() const { return adapter_.bytesConsumed(); }
 
+    const EmuLog& log() const { return log_; }
+
 private:
     HardwareSerial& uart_;
     EngineDataModel& model_;
+
+    // The log taps the byte stream on its way into the decoder; see
+    // EmuLogTap for why it cannot simply be a call in poll().
+    EmuLog log_;
+    EmuLogTap tap_;
+
     EcuLinkAdapter adapter_;
 };
 
