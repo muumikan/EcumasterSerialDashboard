@@ -42,6 +42,10 @@ public:
     // durations still advance when the ECU has gone quiet.
     void update(const EngineDataModel& model, uint32_t nowMs, bool clockTicked);
 
+    // Offers the swipe to the page on screen first, then turns the page.
+    // Returns true when something acted on it.
+    bool handleGesture(lv_dir_t direction);
+
     void showPage(uint8_t index);
     void nextPage() { showPage(static_cast<uint8_t>((page_ + 1) % kPageCount)); }
     void previousPage() { showPage(static_cast<uint8_t>((page_ + kPageCount - 1) % kPageCount)); }

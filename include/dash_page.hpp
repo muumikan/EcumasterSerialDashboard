@@ -41,6 +41,18 @@ public:
 
     virtual const char* name() const = 0;
 
+    // A page's chance to use a swipe before it turns the page. Return true to
+    // say the gesture was consumed. Pages that fit on the screen - which is
+    // all of them but the alarm list - want the default.
+    //
+    // Left and right are offered too, so a page could use them, but nothing
+    // does: taking them away would leave the driver stuck on a page with no
+    // obvious way off.
+    virtual bool onSwipe(lv_dir_t direction) {
+        (void)direction;
+        return false;
+    }
+
     lv_obj_t* root() const { return root_; }
 
 protected:

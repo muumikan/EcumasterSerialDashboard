@@ -151,6 +151,10 @@ void AlarmsScreen::buildFooter() {
     lv_obj_set_style_text_color(makeCell(footer, 168, "RUN"), theme::dim(), 0);
     runTime_ = makeCell(footer, 208, "0:00");
 
+    // Only says anything when the list is longer than the screen.
+    range_ = makeCell(footer, 258, "");
+    lv_obj_set_style_text_color(range_, theme::dim(), 0);
+
     since_ = lv_label_create(footer);
     lv_label_set_text(since_, "");
     lv_obj_set_style_text_color(since_, theme::dotOff(), 0);
@@ -166,20 +170,70 @@ void AlarmsScreen::update(const EngineDataModel& model,
 
     const uint32_t revision = alarms.events().revision();
     const bool ticked = static_cast<int32_t>(nowMs - lastPaintMs_) >= static_cast<int32_t>(kTickMs);
-    if (revision == lastRevision_ && !ticked) {
+    if (revision == lastRevision_ && !ticked && !dirty_) {
         return;
     }
     lastRevision_ = revision;
     lastPaintMs_ = nowMs;
+    dirty_ = false;
 
     paint(alarms, nowMs);
 }
 
+// A swipe arrives between paints, so the count to clamp against is the one
+// from the last paint. It cannot be stale in a way that matters: the only
+// thing that changes it is a new event, which resets the scroll anyway.
+bool AlarmsScreen::onSwipe(lv_dir_t direction) {
+    if (lastCount_ <= kVisibleRows) {
+        return false;   // nothing to scroll; let the swipe turn the page
+    }
+    const uint8_t maxTop = static_cast<uint8_t>(lastCount_ - kVisibleRows);
+
+    uint8_t next = scrollTop_;
+    if (direction == LV_DIR_TOP) {          // finger up, list moves up
+        next = scrollTop_ + kScrollStep > maxTop
+                   ? maxTop
+                   : static_cast<uint8_t>(scrollTop_ + kScrollStep);
+    } else if (direction == LV_DIR_BOTTOM) {
+        next = scrollTop_ < kScrollStep ? 0
+                                        : static_cast<uint8_t>(scrollTop_ - kScrollStep);
+    } else {
+        return false;
+    }
+
+    // Already at the end: report the swipe as unused so it does nothing,
+    // rather than swallowing it and leaving the screen unchanged.
+    if (next == scrollTop_) {
+        return false;
+    }
+    scrollTop_ = next;
+    dirty_ = true;
+    return true;
+}
+
 void AlarmsScreen::paint(const AlarmEngine& alarms, uint32_t nowMs) {
     const EventLog& log = alarms.events();
-    const uint8_t shown = log.count() < kVisibleRows ? log.count() : kVisibleRows;
+    const uint8_t count = log.count();
 
-    if (log.count() == 0) {
+    // A new event lands at the top of the list, and it is the one the driver
+    // needs to see. Anyone reading history gets pulled back to it.
+    if (count != lastCount_) {
+        if (count > lastCount_) {
+            scrollTop_ = 0;
+        }
+        lastCount_ = count;
+    }
+    const uint8_t maxTop = count > kVisibleRows
+                               ? static_cast<uint8_t>(count - kVisibleRows)
+                               : 0;
+    if (scrollTop_ > maxTop) {
+        scrollTop_ = maxTop;
+    }
+
+    const uint8_t remaining = static_cast<uint8_t>(count - scrollTop_);
+    const uint8_t shown = remaining < kVisibleRows ? remaining : kVisibleRows;
+
+    if (count == 0) {
         lv_obj_clear_flag(empty_, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(empty_, LV_OBJ_FLAG_HIDDEN);
@@ -195,7 +249,7 @@ void AlarmsScreen::paint(const AlarmEngine& alarms, uint32_t nowMs) {
         }
         lv_obj_clear_flag(row.root, LV_OBJ_FLAG_HIDDEN);
 
-        const AlarmEvent& event = log.at(i);
+        const AlarmEvent& event = log.at(static_cast<uint8_t>(scrollTop_ + i));
 
         // The stripe keeps its full colour whatever the state. Brightness says
         // "is this true now", colour says "how bad was it" - two questions, so
@@ -241,6 +295,21 @@ void AlarmsScreen::paint(const AlarmEngine& alarms, uint32_t nowMs) {
     snprintf(text, sizeof(text), "%u:%02u",
              static_cast<unsigned>(seconds / 60), static_cast<unsigned>(seconds % 60));
     lv_label_set_text(runTime_, text);
+
+    // Position and the arrows that say a swipe will do something. Blank when
+    // the whole list is on screen, which is the usual case.
+    if (count > kVisibleRows) {
+        char range[32];
+        snprintf(range, sizeof(range), "%s %u-%u/%u %s",
+                 scrollTop_ > 0 ? LV_SYMBOL_UP : " ",
+                 static_cast<unsigned>(scrollTop_ + 1),
+                 static_cast<unsigned>(scrollTop_ + shown),
+                 static_cast<unsigned>(count),
+                 scrollTop_ < maxTop ? LV_SYMBOL_DOWN : " ");
+        lv_label_set_text(range_, range);
+    } else {
+        lv_label_set_text(range_, "");
+    }
 
     if (log.runStart().valid) {
         char stamp[9];

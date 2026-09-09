@@ -15,11 +15,7 @@ void gestureCb(lv_event_t* event) {
     DashUi* ui = static_cast<DashUi*>(lv_event_get_user_data(event));
     const lv_dir_t direction = lv_indev_get_gesture_dir(lv_indev_get_act());
 
-    if (direction == LV_DIR_LEFT) {
-        ui->nextPage();
-    } else if (direction == LV_DIR_RIGHT) {
-        ui->previousPage();
-    } else {
+    if (!ui->handleGesture(direction)) {
         return;
     }
     lv_indev_wait_release(lv_indev_get_act());
@@ -228,6 +224,28 @@ void DashUi::updateSummary(LinkState link) {
     lv_obj_set_style_text_color(summaryBody_, latched ? theme::warn() : theme::dim(), 0);
 
     lv_obj_clear_flag(summary_, LV_OBJ_FLAG_HIDDEN);
+}
+
+// The page on screen gets first refusal. Only the alarm list takes anything,
+// and only up and down, so a left or right swipe still turns the page from
+// everywhere - including from a half-scrolled alarm list.
+bool DashUi::handleGesture(lv_dir_t direction) {
+    if (pages_[page_]->onSwipe(direction)) {
+        // Same trick showPage uses. Without it a scroll would sit unpainted
+        // until the next clock tick, which is up to a second of nothing
+        // happening after the finger has already left the glass.
+        lastRevision_ = UINT32_MAX;
+        return true;
+    }
+    if (direction == LV_DIR_LEFT) {
+        nextPage();
+        return true;
+    }
+    if (direction == LV_DIR_RIGHT) {
+        previousPage();
+        return true;
+    }
+    return false;
 }
 
 void DashUi::showPage(uint8_t index) {
