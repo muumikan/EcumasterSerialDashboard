@@ -66,6 +66,13 @@ void EdlSerialAdapter::acceptFrame() {
     lastGood_ = parsed;
     haveGood_ = true;
 
+    // Raw, before anything was decoded from it. The log file is the wire
+    // bytes, so a decode bug cannot reach it - which is the whole reason the
+    // frame is offered here rather than after read().
+    if (sink_ != nullptr) {
+        sink_->onFrame(buffer_, kEdlFrameSize);
+    }
+
     // A hint, not a verdict. See the header.
     const uint16_t stamp = parsed.frameStamp;
     if (haveStamp_) {

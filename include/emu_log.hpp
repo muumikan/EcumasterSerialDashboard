@@ -1,50 +1,62 @@
 #pragma once
 
 #include <Arduino.h>
+#include <stddef.h>
 #include <stdint.h>
 
-// -----------------------------------------------------------------------------
-//  Raw EMU serial frame logging to microSD.
-//
-//  ATTRIBUTION — the log file format documented and produced here was learned
-//  by reading:
-//
-//      danuecumaster/ECUMaster-ESP32-Bluetooth-Dashboard-Logger
-//      https://github.com/danuecumaster/ECUMaster-ESP32-Bluetooth-Dashboard-Logger
-//      Licensed GNU GPL v3.0
-//      Specifically main.ino: logEMU(), readFrame() and getNextFilename().
-//
-//  What was taken from it is the *file format*, not its code: validated 5-byte
-//  EMU serial frames concatenated verbatim, no header, no footer, no in-file
-//  timestamps, in a file named "*.emualog". The implementation below is written
-//  from that description plus the frame layout the protocol already dictates,
-//  which this project independently implements in EmuSerialAdapter.
-//
-//  See docs/emu-log-format.md for what is verified and what is not. The claim
-//  that Ecumaster's PC software opens this format is that project's claim; it
-//  has not been confirmed here against real software or an official spec.
-// -----------------------------------------------------------------------------
+#include "date_time.hpp"
+#include "frame_sink.hpp"
 
 namespace ecu {
 
-// Log frames as the ECU sent them, byte for byte.
+// Writes an Ecumaster .emulog file to microSD.
 //
-// Fed one raw byte at a time from the ECU stream. Re-does the protocol's own
-// framing so that only frames with a correct magic byte and checksum reach the
-// card - garbage from a resync is dropped rather than written.
-class EmuLog {
+// The format is documented in docs/emu-log-format.md and was established from
+// Client-written logs, then proven by building a file that EMU Classic Client
+// opens. In short:
+//
+//     .emulog = gzip( 12-byte header + N x 256-byte records )
+//     record[i] == EDL-1 frame data[i+4]
+//
+// A record is the 260-byte EDL-1 frame with its 4-byte marker stripped. So
+// this class decodes nothing: it takes frames the adapter has already framed,
+// drops four bytes, and compresses. No channel map, no scaling, and no way for
+// a decode bug to corrupt a log.
+//
+// Two properties of the format shape the implementation:
+//
+//  - **gzip is mandatory.** An uncompressed file opens in the Client without
+//    an error and graphs nothing. There is no half-measure available.
+//
+//  - **The stream is never finalised.** The Client's own files end on a
+//    Z_SYNC_FLUSH boundary with no gzip trailer, which is how a logger writes
+//    a file it may never get to close. So neither does this: pulling the key
+//    costs at most the bytes since the last flush, and `end()` exists for
+//    tidiness rather than correctness.
+//
+// EDL-1 only. The classic protocol's 5-byte frames cannot express this format
+// at all - see EcuDataProvider, which does not attach a logger in that build.
+class EmuLog : public FrameSink {
 public:
-    // Mounts the card and opens the next free "/NNNNN.emualog". Safe to call
-    // when no card is present: logging simply stays off.
-    bool begin();
+    // Mounts the card and opens "/YYYYMMDD_HHMM_SS.emulog". The date lives in
+    // the filename and nowhere else in the format, so a clock that has not
+    // been read yet is a reason to wait rather than to write a wrong name.
+    // Safe to call with no card: logging simply stays off.
+    bool begin(const DateTime& now);
 
-    // One raw byte straight off the ECU link, before any decoding.
-    void feed(uint8_t byte);
+    // Refuse to log at all, and say why when asked. Used on the classic link,
+    // where the format cannot be produced - see EcuDataProvider's constructor.
+    // Without this the logger would mount the card and create an empty file
+    // that never receives a frame.
+    void disable(const char* why);
+
+    // One frame straight off the wire, marker included. From FrameSink.
+    void onFrame(const uint8_t* frame, size_t size) override;
 
     // Periodic flush. Call from the main loop.
     void loop(uint32_t nowMs);
 
-    // Flush and close. Frames fed after this are dropped.
+    // Flush and stop. Frames after this are dropped.
     void end();
 
     bool ready() const { return ready_; }
@@ -53,8 +65,10 @@ public:
     // scroll past before a console can attach, so the reason has to survive
     // somewhere it can be asked for later.
     const char* failure() const { return ready_ ? nullptr : failure_; }
+
     uint32_t framesWritten() const { return frames_; }
-    uint32_t bytesWritten() const { return bytes_; }
+    uint32_t bytesWritten() const { return bytes_; }        // compressed, on card
+    uint32_t framesDropped() const { return dropped_; }
     const char* fileName() const { return fileName_; }
 
 private:
@@ -63,59 +77,52 @@ private:
     static constexpr uint8_t kMountAttempts = 3;
     static constexpr uint32_t kMountRetryMs = 100;
 
-    static constexpr size_t kFrameSize = 5;
-    static constexpr size_t kBufferSize = 512;   // whole flash pages at a time
-    static constexpr uint32_t kFlushIntervalMs = 5000;
+    static constexpr size_t kFrameSize = 260;
+    static constexpr size_t kMarkerSize = 4;    // dropped; see the class comment
+    static constexpr size_t kRecordSize = kFrameSize - kMarkerSize;
 
-    void writeFrame(const uint8_t* frame);
-    void drain();
+    // Deflate output is accumulated here and written in one go. Sized to a
+    // whole flash page so a write is never a read-modify-write.
+    //
+    // This buffer, not the compressor, sets what a power cut costs: whatever
+    // has not reached the card is gone. At the ~1.3 kB/s this format
+    // compresses to, 4 KB is about three seconds. Writing more often would
+    // mean a few hundred bytes per write and the FAT overhead of each one.
+    static constexpr size_t kCardBufferSize = 4096;
 
-    uint8_t window_[kFrameSize] = {};
-    uint8_t windowFill_ = 0;
+    // Sync-flush the compressor this often. This does not push anything to the
+    // card; it makes the byte stream readable if it is cut here, which is what
+    // lets a truncated file be opened at all. Costs a little compression.
+    static constexpr uint8_t kFramesPerFlush = 6;
 
-    uint8_t buffer_[kBufferSize] = {};
-    size_t bufferFill_ = 0;
+    // Write to the card at least this often even if the buffer has not filled,
+    // so a quiet link does not leave the last records stranded in RAM.
+    static constexpr uint32_t kCardFlushIntervalMs = 5000;
+
+    bool openCard();
+    bool startStream(const DateTime& now);
+    bool compress(const uint8_t* data, size_t size, int flush);
+    void appendToCard(const uint8_t* data, size_t size);
+    void writeCardBuffer();
+    void fail(const char* why);
+
+    // miniz's put-buf callback; forwards to appendToCard.
+    static int putBuf(const void* buffer, int length, void* user);
+
+    void* deflator_ = nullptr;   // tdefl_compressor, allocated in PSRAM
+    uint8_t cardBuffer_[kCardBufferSize] = {};
+    size_t cardFill_ = 0;
 
     uint32_t frames_ = 0;
+    uint32_t dropped_ = 0;
     uint32_t bytes_ = 0;
-    uint32_t lastFlushMs_ = 0;
+    uint8_t sinceFlush_ = 0;
+    uint32_t lastCardFlushMs_ = 0;
     bool ready_ = false;
+    bool disabled_ = false;
+    bool writeFailed_ = false;
     const char* failure_ = "not started";
-    char fileName_[24] = {0};
-};
-
-// A read-only pass-through Stream that copies every byte to the log.
-//
-// This exists because EMUSerial reads the port itself and never exposes the
-// bytes it consumed: `checkEmuSerial()` returns void and `decodeEmuFrame()` is
-// private. Rather than modify the vendored reference decoder, the adapter is
-// pointed at this wrapper instead of the UART, and the bytes are tapped as they
-// pass through.
-//
-// write() is deliberately inert. The ECU link is read-only, and nothing should
-// be able to transmit through this object either.
-class EmuLogTap : public Stream {
-public:
-    EmuLogTap(Stream& source, EmuLog& log) : source_(source), log_(log) {}
-
-    int available() override { return source_.available(); }
-    int peek() override { return source_.peek(); }
-
-    int read() override {
-        const int value = source_.read();
-        if (value >= 0) {
-            log_.feed(static_cast<uint8_t>(value));
-        }
-        return value;
-    }
-
-    // Never transmits. See the class comment.
-    size_t write(uint8_t) override { return 0; }
-    void flush() override {}
-
-private:
-    Stream& source_;
-    EmuLog& log_;
+    char fileName_[32] = {0};
 };
 
 }  // namespace ecu

@@ -6,6 +6,7 @@
 #include "date_time.hpp"
 #include "display.hpp"
 #include "ecu_link.hpp"
+#include "rtc_clock.hpp"
 
 namespace ecu {
 
@@ -20,9 +21,14 @@ void AppController::begin() {
 
     provider_.begin();
 
+    // Before the display: the log is named after the date, and a dashboard
+    // whose screen failed should still record the drive.
+    rtc_.begin();
+    openLogWhenNamed();
+
     displayReady_ = display::begin();
     if (displayReady_) {
-        ui_.begin(lv_scr_act());
+        ui_.begin(lv_scr_act(), rtc_);
     } else {
         Serial.println(F("display: LVGL buffer allocation failed, running headless"));
     }
@@ -59,9 +65,9 @@ void AppController::announce() {
     Serial.println(toString(model_.linkState(millis())));
 
     Serial.print(F("clock     : "));
-    if (displayReady_ && ui_.clock().present()) {
+    if (rtc_.present()) {
         char stamp[9];
-        formatHms(ui_.clock().now(), stamp, sizeof(stamp));
+        formatHms(rtc_.now(), stamp, sizeof(stamp));
         Serial.println(stamp);
     } else {
         Serial.println(F("not available"));
@@ -71,7 +77,14 @@ void AppController::announce() {
     if (provider_.log().ready()) {
         Serial.print(provider_.log().fileName());
         Serial.print(F("  frames="));
-        Serial.println(provider_.log().framesWritten());
+        Serial.print(provider_.log().framesWritten());
+        Serial.print(F("  bytes="));
+        Serial.print(provider_.log().bytesWritten());
+        if (provider_.log().framesDropped() > 0) {
+            Serial.print(F("  dropped="));
+            Serial.print(provider_.log().framesDropped());
+        }
+        Serial.println();
     } else {
         Serial.print(F("off - "));
         Serial.println(provider_.log().failure());
@@ -84,6 +97,29 @@ void AppController::announce() {
         Serial.println(F("failed, running headless"));
     }
     Serial.println();
+}
+
+// The log file is named after the date and nothing else in the format carries
+// it, so there is no log until the clock can name one. Retried every pass
+// because the RTC is on the touch I2C bus and may answer late.
+void AppController::openLogWhenNamed() {
+    if (logOpened_) {
+        return;
+    }
+    if (rtc_.now().valid) {
+        logOpened_ = true;
+        provider_.log().begin(rtc_.now());
+        return;
+    }
+    if (!rtc_.present()) {
+        // No clock at all. Naming the log after the build gives a wrong date
+        // on a readable file, which beats not recording the drive. The
+        // collision suffix in EmuLog keeps a second run from erasing the
+        // first, since every run would otherwise pick the same name.
+        logOpened_ = true;
+        Serial.println(F("emulog: no RTC, naming the log after the build"));
+        provider_.log().begin(buildTime());
+    }
 }
 
 void AppController::loop() {
@@ -103,10 +139,13 @@ void AppController::loop() {
         announce();
     }
 
+    const bool clockTicked = rtc_.loop(nowMs);
+    openLogWhenNamed();
+
     provider_.loop(nowMs);
 
     if (displayReady_) {
-        ui_.update(model_, nowMs);
+        ui_.update(model_, nowMs, clockTicked);
         display::loop();
     }
 

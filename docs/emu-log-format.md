@@ -86,7 +86,16 @@ against the byte stream pinned the structure without ambiguity:
 **Then it was proven by writing one.** A file rebuilt from the same data by an
 independent writer — our 10-byte gzip header, raw deflate, `Z_SYNC_FLUSH` every
 6 records, no trailer — opens in EMU Classic Client and graphs correctly. The
-format is not inferred; it has been produced and read back.
+format is not inferred; it has been produced and read back. Feeding
+reconstructed 260-byte frames through `EmuLog`'s exact algorithm reproduces
+that file byte for byte, so the firmware's output is validated ahead of the
+hardware.
+
+**The first record is an ordinary sample.** The Client's CSV export skips it,
+which initially looked like a preamble. It is not: record 0 decodes to
+plausible values and its `frameStamp` continues into the sequence. The exporter
+simply has no previous sample to measure the first interval against. Nothing
+special has to be written at the head of the file.
 
 ## What the Client requires
 
@@ -109,17 +118,18 @@ produces the raw deflate that belongs under our own gzip header.
 PSRAM. At 20 Hz the input is 4.8 kB/s and the output about 1.3 kB/s — roughly
 4.6 MB per hour.
 
-**None of this is implemented yet.** `src/logging/emu_log.cpp` still writes raw
-classic 5-byte frames and produces nothing usable on an EDL-1 car. Replacing it
-is the next task.
+This is what `src/logging/emu_log.cpp` now does. `EdlSerialAdapter` offers each
+frame that passes its three framing checks to a `FrameSink` before decoding
+anything from it, and `EmuLog` drops four bytes and compresses. Nothing is
+decoded on the way into a log, so no decode bug can reach one.
+
+Untested on the car as of 9 September 2026: the algorithm is verified against
+real data on a PC, the SD write path is not.
 
 ## Still unknown
 
 - **The header's third word**, 10 000 000. Constant in both samples, so it is
   copied verbatim; whether the Client reads it is untested.
-- **Whether the leading record matters.** The Client's CSV export skips the
-  first record of every file. Whether it is a required preamble or just an
-  export quirk has not been tested.
 - **Whether the filename pattern is required** or merely conventional.
 - **Whether the record layout is stable across EMU firmware versions.** Both
   samples are one car on one firmware. The layout is the EDL-1 frame layout, so

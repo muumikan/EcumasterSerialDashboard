@@ -4,6 +4,7 @@
 #include <EDLSerial.h>
 
 #include "engine_data.hpp"
+#include "frame_sink.hpp"
 
 namespace ecu {
 
@@ -40,6 +41,14 @@ constexpr size_t kEdlFrameSize = 260;
 class EdlSerialAdapter {
 public:
     explicit EdlSerialAdapter(Stream& stream);
+
+    // Offer every frame that passes all three checks to `sink`, raw, before
+    // anything is decoded from it. Optional; null means nobody is listening.
+    //
+    // Frames the checks reject are not offered. A logger wants the framing
+    // work this class already does, and a record assembled from two half
+    // frames is worse in a log than a missing one: it reads as real data.
+    void setSink(FrameSink* sink) { sink_ = sink; }
 
     // Drain the UART and decode any complete frames. Returns bytes consumed.
     uint32_t poll();
@@ -93,6 +102,7 @@ private:
     Stream& stream_;
     FramePump pump_;
     EDLSerial edl_;
+    FrameSink* sink_ = nullptr;
 
     // One frame plus the lookahead needed to confirm the next marker.
     uint8_t buffer_[kEdlFrameSize + kEdlMagicSize] = {};

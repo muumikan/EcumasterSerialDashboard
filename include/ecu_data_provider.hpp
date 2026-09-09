@@ -18,6 +18,9 @@ public:
 
     // Opens UART1 with the pins/baud from board_config. No TX pin is
     // attached, so the link is read-only at the hardware level.
+    //
+    // Does not open the log: the log is named after the date, and the clock
+    // has not necessarily been read this early. AppController opens it.
     void begin();
     void begin(uint32_t baud, int8_t rxPin, int8_t txPin);
 
@@ -26,17 +29,18 @@ public:
 
     uint32_t bytesConsumed() const { return adapter_.bytesConsumed(); }
 
+    EmuLog& log() { return log_; }
     const EmuLog& log() const { return log_; }
 
 private:
     HardwareSerial& uart_;
     EngineDataModel& model_;
 
-    // The log taps the byte stream on its way into the decoder; see
-    // EmuLogTap for why it cannot simply be a call in poll().
+    // The adapter offers whole validated frames to the log; see its setSink.
+    // Nothing taps the byte stream any more, because nothing needs to: the
+    // .emulog record is an EDL-1 frame minus its marker, and the adapter has
+    // already done the work of deciding where a frame begins.
     EmuLog log_;
-    EmuLogTap tap_;
-
     EcuLinkAdapter adapter_;
 };
 
