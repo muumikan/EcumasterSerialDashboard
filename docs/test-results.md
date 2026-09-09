@@ -5,6 +5,76 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-09 — clock, alarm list and SD logging on the car
+
+Firmware: `0e2ef5c`, environment `crowpanel_advance_35_edl`. First run of the
+RTC, the Alarms page and SD logging on the hardware.
+
+**Confirmed with the ECU connected**
+
+- Values read correctly on screen and behave sensibly on all six pages.
+- **The alarm list works on EDL-1.** Events land in the order they happened,
+  with times, and the page reads the way it was designed to.
+- This covers three of the items the 8 September entry listed as untested:
+  alarm behaviour on a real engine, the run summary, and SD logging.
+
+**The RTC seeding rule was wrong the first time**
+
+The panel came up reading 00:24 while the firmware reading it had been compiled
+at 19:44, so no seed had been written. The condition was the chip's VL flag
+alone, and VL only says the oscillator stopped — it says nothing about whether
+the time is right. With the backup cell fitted since the factory the clock had
+been running the whole time and had never been set, VL clear throughout.
+
+Fixed by adding a plausibility test: a clock reading earlier than the build it
+is being read by has never been set. Verified on the next boot — the clock came
+up correct and, on subsequent boots, was left alone rather than reseeded.
+
+**SD logging: works, but mounted intermittently and the cause is unknown**
+
+- With no card, `sdCommand(): Card Failed! cmd: 0x00` at CMD0, as expected.
+- With a card, the same build over four consecutive resets: mount, fail,
+  mount, fail. Card, wiring and filesystem are constant across those four, so
+  none of them is the variable.
+- Lowering the SPI clock from 80 MHz to 25 MHz **did not change it**. That was
+  still worth doing — 80 MHz is outside what SD in SPI mode supports — but it
+  was a fix for a different problem.
+- A later session of eleven consecutive resets all mounted, every one on the
+  **first** attempt, so the retry added in between never ran and cannot be
+  credited. Something outside the firmware changed; card seating is the guess.
+  Recorded as an open item rather than a closed one.
+
+The file-number sequence is what proves the eleven: visible banners showed
+00009, 00010, 00014, 00015, 00016 and 00019, and the gaps line up exactly with
+the boots whose banner was lost, so those mounted too.
+
+**Two smaller findings**
+
+- **The console showed nothing after an upload.** All boot output is printed
+  inside the first second, and a monitor attached afterwards misses it. The
+  announce-on-connect added for this was not enough on its own: `Serial` reads
+  as connected on this USB-CDC port before the host has re-opened it, so on
+  about half the resets the reprint also went nowhere. Pressing any key now
+  reprints the state, which does not depend on winning a race.
+- **Stored settings were discarded.** `getBytes(): not enough space in buffer:
+  132 < 136` — the record in NVS was written by a firmware whose `DashSettings`
+  was four bytes larger. The size and version check rejected it and fell back
+  to defaults, which is the designed behaviour. It stops once any setting is
+  saved.
+
+**Still untested**
+
+- Whether the bad-frame count stays at zero while the card is being written —
+  a long write during logging is the case that would push it.
+- Whether the SD mount survives vibration in the car.
+- Whether settings survive a power cycle (the stale record above has to be
+  overwritten once before this can be checked at all).
+- Backlight PWM, brightness and night mode.
+- Whether the log file opens in EMU Classic Client. It does not, and the
+  format question is still open.
+
+---
+
 ## 2026-09-08 — EDL-1 link, after the framing fix
 
 Firmware: `4c0b53b`, environment `crowpanel_advance_35_edl`. ECU reconfigured

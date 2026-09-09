@@ -4,6 +4,78 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
+## The alarm list is a log, not an operator's queue
+
+The list was first drawn with an acknowledge column and an ACK ALL button, the
+way an industrial alarm list works. That was dropped before any of it was
+written.
+
+In a control room acknowledgement is part of a chain of responsibility: someone
+is on shift, sees the alarm, and takes it. In a car the person in front of the
+screen is driving. Nobody is standing by to act on a row, and an unacknowledged
+alarm does not mean anyone has failed to respond to it - it means the driver was
+busy driving, which is what they are supposed to be doing. A button whose only
+effect is to dim some text is a button that takes attention off the road.
+
+What remains carries the same information in two channels that cost nothing to
+read. Brightness answers "is this true right now": active rows are bright,
+returned rows are dim. Colour answers "how bad was it", and the severity stripe
+keeps its full colour on returned rows too, so the history stays scannable
+instead of going flat grey.
+
+Nothing blinks either. Blinking is standard practice for an unacknowledged
+alarm and wrong here for the same reason: it is movement in the driver's
+peripheral vision.
+
+## Alarms are recorded as events, not one slot per alarm type
+
+`AlarmEngine` latches trips into `latched_[kAlarmCount]` - one slot per alarm
+id, holding the worst moment. That answers "did this ever trip", which is what
+the Diag page asks, and it cannot answer "what happened, and in what order".
+A coolant warning at 14:33 and another at 14:41 are the same slot, and the
+second one is invisible.
+
+`EventLog` is a ring of the most recent events, newest first, each stamped with
+the wall clock, the rpm at onset and how long the condition held. An event that
+is already open escalates rather than duplicating, so a warning that becomes
+critical stays one event.
+
+Three sources feed it, and the two new ones are the point of the exercise. The
+ECU's check-engine word was previously only ever shown as the bits set right
+now, so a fault that came and went while driving left no trace at all. Link
+health was a counter, and a loose connector produces clusters - which are
+visible in a time-ordered list and invisible in a count.
+
+The old latched list stays on the Diag page for now. It is redundant against
+this and removing it is a UI change of its own.
+
+## The clock is set from the build, and only when it cannot be right
+
+There is no network and no GPS in the car, so the only time the firmware can
+know is the moment it was compiled. `__DATE__` and `__TIME__` are written to
+the RTC, and a Clock category on the Setup page was considered and dropped: the
+clock is the RTC's state, not a setting, and it does not belong in the settings
+blob.
+
+The interesting part is when to write it. The first attempt used the RTC's VL
+flag alone, which was wrong. VL says the oscillator stopped. It does not say
+the time is right - a part kept alive by its backup cell since the factory has
+a clock that has been running the whole time and has never been set, VL clear
+throughout. That is exactly what this board had: the panel came up reading
+00:24 while the firmware reading it had been compiled at 19:44.
+
+The second trigger is plausibility. A clock cannot legitimately read earlier
+than the moment the firmware reading it was compiled, so anything that does has
+never been set. Once seeded the RTC runs ahead of the build time and the test
+stops firing; flashing a newer build over a correct clock leaves it alone; and
+a clock that has drifted slow gets nudged forward by every reflash, which is a
+useful accident rather than a designed feature.
+
+The cost is daylight saving. The seed carries whatever offset was in force when
+the file was compiled, so twice a year the clock is an hour out and the fix is
+a reflash. That was accepted deliberately rather than build a settings UI for
+it.
+
 ## Alarms colour the cell and name themselves; they never move the page
 
 An out-of-range value lights its own tile — amber for a warning, red for
@@ -261,9 +333,26 @@ implementation is the specification available.
 - **160 EDL-1 channels are decoded but not displayed.** Listed in
   [edl-channels.md](edl-channels.md); boost control, knock-versus-noise,
   trigger health and idle control are the ones this car can actually use.
-- **SD logging is untested.** It lives on the `feature/sd-logging` branch and
-  has never been run. The format question in
-  [emu-log-format.md](emu-log-format.md) is still open too.
+- **The SD card mounts intermittently, and nobody knows why.** Measured on the
+  bench: same card, same build, four consecutive resets gave mount, fail,
+  mount, fail. Dropping the bus clock from an out-of-spec 80 MHz to 25 MHz
+  changed nothing. A later session of eleven consecutive resets all mounted on
+  the first attempt with nothing in the firmware to explain the difference -
+  most likely the card seating itself, but that is a guess. `EmuLog::begin`
+  now retries three times 100 ms apart and reports which attempt worked, so a
+  `card mounted on attempt 2` in the console is the signal that the fault is
+  back. Vibration in the car is its own test of that contact.
+- **Log files are still numbered, not dated.** `/00019.emualog` and so on. Now
+  that the RTC is working and trusted, timestamped names are a small change
+  and the obvious next one. The format question in
+  [emu-log-format.md](emu-log-format.md) is still open separately: the file
+  written does not open in EMU Classic Client.
+- **The Diag page's latched block is redundant.** The Alarms page supersedes
+  it and does it properly. Removing the block frees about 60 px of the left
+  column, which the link history would use well.
+- **The clock drifts and does not know about daylight saving.** The crystal is
+  uncompensated, so expect one to three minutes a month, always slow. Every
+  reflash resyncs it; twice a year it is an hour out until one happens.
 - **UI repaints at frame rate.** `DashUi` updates the visible page whenever the
   model's revision changes, which at 19200 baud is a few hundred times a
   second. LVGL coalesces the redraw, but the formatting work is done every
@@ -281,7 +370,9 @@ implementation is the specification available.
   so the RPM readout is smaller than the mockup's. `λ` and `Δ` are outside its
   character set, so the UI uses `LAMBDA`, `DFPR` and `C` instead of `°C`. A
   custom font subset would fix all of this at once.
-- **Alarm state freezes when the link drops.** Alarms are only re-evaluated
-  when the model's revision changes, so the last known state persists while
-  the status bar reads `OFFLINE`. Deliberate for now; clearing them on
-  `Offline` is a small change in `DashUi::update`.
+- **Alarm state freezes when the link drops.** Evaluation now runs on a link
+  state change as well as on new data - it has to, or a lost link would never
+  be recorded as an event - but it re-evaluates the same stale snapshot, so
+  the last known severities persist while the status bar reads `OFFLINE`.
+  Deliberate for now; clearing them on `Offline` is a small change in
+  `DashUi::update`.
