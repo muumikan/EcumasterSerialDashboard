@@ -25,16 +25,34 @@ SPIClass sdSpi(HSPI);
 bool EmuLog::begin() {
     sdSpi.begin(board::kSdSckPin, board::kSdMisoPin, board::kSdMosiPin);
 
-    if (!SD.begin(board::kSdCsPin, sdSpi, board::kSdSpiHz)) {
-        // SD.begin covers both "nothing in the slot" and "the card is there
-        // but the filesystem will not mount". The second is the common one on
-        // a card straight out of its packaging: anything 64 GB or larger ships
-        // exFAT, which this library does not read.
+    // Measured on this board: the same card mounts on one reset and fails on
+    // the next, about half the time, and lowering the bus clock from 80 to
+    // 25 MHz did not change that. It is not the card and not the wiring - it
+    // is initialisation timing, which is what retries are for.
+    uint8_t attempts = 0;
+    bool mounted = false;
+    while (attempts < kMountAttempts && !mounted) {
+        ++attempts;
+        mounted = SD.begin(board::kSdCsPin, sdSpi, board::kSdSpiHz);
+        if (!mounted) {
+            SD.end();
+            delay(kMountRetryMs);
+        }
+    }
+
+    if (!mounted) {
+        // Still both possibilities after three tries: nothing in the slot, or
+        // a filesystem this library cannot read. Anything 64 GB or larger
+        // ships exFAT, which it cannot.
         failure_ = "no card, or not FAT32 (exFAT is not supported)";
         Serial.print(F("emulog: "));
         Serial.println(failure_);
         sdSpi.end();
         return false;
+    }
+    if (attempts > 1) {
+        Serial.print(F("emulog: card mounted on attempt "));
+        Serial.println(attempts);
     }
 
     // Sequential names, so no real-time clock is required. The board has an

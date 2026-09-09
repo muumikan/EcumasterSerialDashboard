@@ -37,7 +37,11 @@ void AppController::begin() {
 // tell whether the board is alive. Waiting for the host at boot would be worse:
 // in the car nobody is listening and the dashboard would just come up later.
 //
-// So say it again, once, at the moment the port is actually opened.
+// So say it again once loop() starts. That is not enough on its own: `Serial`
+// reads as connected on this USB-CDC port well before the host has actually
+// re-opened it after a reset, so on roughly half the resets this print still
+// goes nowhere. Hence the second trigger in loop() - press any key and the
+// board says where it stands, whenever you ask.
 void AppController::announce() {
     Serial.println();
     Serial.println(F("---------------- DASH ----------------"));
@@ -87,6 +91,15 @@ void AppController::loop() {
 
     if (!consoleAnnounced_ && Serial) {
         consoleAnnounced_ = true;
+        announce();
+    }
+
+    // Anything typed at the console reprints the state. The link is read-only
+    // towards the ECU; this reads the debug port, which is a different UART.
+    if (Serial.available() > 0) {
+        while (Serial.available() > 0) {
+            Serial.read();
+        }
         announce();
     }
 

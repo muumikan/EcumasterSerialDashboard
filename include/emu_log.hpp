@@ -58,6 +58,11 @@ public:
     const char* fileName() const { return fileName_; }
 
 private:
+    // A card that mounts on one reset and not the next is not a card that is
+    // missing. Removable media is allowed a couple of goes.
+    static constexpr uint8_t kMountAttempts = 3;
+    static constexpr uint32_t kMountRetryMs = 100;
+
     static constexpr size_t kFrameSize = 5;
     static constexpr size_t kBufferSize = 512;   // whole flash pages at a time
     static constexpr uint32_t kFlushIntervalMs = 5000;
