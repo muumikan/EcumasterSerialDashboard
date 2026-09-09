@@ -26,7 +26,13 @@ bool EmuLog::begin() {
     sdSpi.begin(board::kSdSckPin, board::kSdMisoPin, board::kSdMosiPin);
 
     if (!SD.begin(board::kSdCsPin, sdSpi, board::kSdSpiHz)) {
-        Serial.println(F("emulog: no card, logging disabled"));
+        // SD.begin covers both "nothing in the slot" and "the card is there
+        // but the filesystem will not mount". The second is the common one on
+        // a card straight out of its packaging: anything 64 GB or larger ships
+        // exFAT, which this library does not read.
+        failure_ = "no card, or not FAT32 (exFAT is not supported)";
+        Serial.print(F("emulog: "));
+        Serial.println(failure_);
         sdSpi.end();
         return false;
     }
@@ -44,15 +50,20 @@ bool EmuLog::begin() {
 
     File file = SD.open(fileName_, FILE_WRITE);
     if (!file) {
-        Serial.println(F("emulog: could not create log file"));
+        failure_ = "card mounted but the log file could not be created";
+        Serial.print(F("emulog: "));
+        Serial.println(failure_);
         return false;
     }
     file.close();
 
     ready_ = true;
+    failure_ = nullptr;
     lastFlushMs_ = millis();
 
-    Serial.print(F("emulog: logging to "));
+    Serial.print(F("emulog: "));
+    Serial.print(static_cast<unsigned long>(SD.cardSize() / (1024ULL * 1024ULL)));
+    Serial.print(F(" MB card, logging to "));
     Serial.println(fileName_);
     return true;
 }

@@ -48,6 +48,11 @@ public:
     void end();
 
     bool ready() const { return ready_; }
+
+    // Why logging is off, or nullptr when it is running. The boot messages
+    // scroll past before a console can attach, so the reason has to survive
+    // somewhere it can be asked for later.
+    const char* failure() const { return ready_ ? nullptr : failure_; }
     uint32_t framesWritten() const { return frames_; }
     uint32_t bytesWritten() const { return bytes_; }
     const char* fileName() const { return fileName_; }
@@ -70,6 +75,7 @@ private:
     uint32_t bytes_ = 0;
     uint32_t lastFlushMs_ = 0;
     bool ready_ = false;
+    const char* failure_ = "not started";
     char fileName_[24] = {0};
 };
 

@@ -61,14 +61,22 @@ constexpr uint32_t kLcdSpiReadHz = 16000000;
 
 // --------------------------------------------------------------- SD card --
 // microSD slot on its own SPI bus (HSPI), separate from the display's SPI2.
-// From Elecrow's lesson-04 SD example. The chip-select line is not routed to a
-// GPIO on this board - the card is permanently selected - but the Arduino SD
-// API still requires a pin argument, so a spare one is passed.
+//
+// Verified against Elecrow's schematic for board v1.4 (Eagle_SCH&PCB/1.4):
+// nets IO4_SD_MISO, IO5_SD_SCK, IO6_SD_MOSI and IO7_SD_CS all run from the
+// ESP32 to the holder J5. An earlier comment here claimed the chip select was
+// not routed and that pin 7 was a placeholder; that was wrong, J5.CS is on
+// IO7.
 constexpr int8_t kSdMosiPin = 6;
 constexpr int8_t kSdMisoPin = 4;
 constexpr int8_t kSdSckPin = 5;
-constexpr int8_t kSdCsPin = 7;  // not connected to IO; placeholder for the API
-constexpr uint32_t kSdSpiHz = 80000000;
+constexpr int8_t kSdCsPin = 7;
+
+// SD in SPI mode does not go anywhere near 80 MHz - the bus tops out around
+// 25 MHz in practice, and the previous value was simply out of spec. Card
+// initialisation runs at 400 kHz regardless, so this governs the transfers
+// after mounting.
+constexpr uint32_t kSdSpiHz = 25000000;
 
 // ------------------------------------------------------------------- Touch --
 // GT911 capacitive controller. Shares I2C0 with the on-board RTC.

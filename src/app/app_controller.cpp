@@ -69,7 +69,8 @@ void AppController::announce() {
         Serial.print(F("  frames="));
         Serial.println(provider_.log().framesWritten());
     } else {
-        Serial.println(F("off, no card"));
+        Serial.print(F("off - "));
+        Serial.println(provider_.log().failure());
     }
 
     Serial.print(F("display   : "));
