@@ -8,16 +8,26 @@ namespace theme {
 
 // Panels sit darker than the first pass and the dividing lines a little
 // brighter. On the car the mid-grey cells washed out the numerals; the reading
-// now comes from the digits against near-black, and the tiles are separated by
+// now comes from the digits against black, and the tiles are separated by
 // their edges rather than by their fill.
-inline lv_color_t bg()        { return lv_color_hex(0x07090A); }
-inline lv_color_t statusBg()  { return lv_color_hex(0x0B0E0F); }
-inline lv_color_t panel()     { return lv_color_hex(0x0D1113); }
-inline lv_color_t line()      { return lv_color_hex(0x2C363A); }
-inline lv_color_t track()     { return lv_color_hex(0x12171A); }
-inline lv_color_t text()      { return lv_color_hex(0xEDF1F2); }
-inline lv_color_t dim()       { return lv_color_hex(0x75858B); }
-inline lv_color_t dotOff()    { return lv_color_hex(0x303A3E); }
+//
+// Every grey here is a true grey, R = G = B. The darkening pass before this
+// one left them at values like 0x0D1113, where green and blue sit above red by
+// a few counts. On paper that is a neutral so close to black it should not be
+// visible; on the panel in the car it read as a green cast across every value
+// tile. The IPS is not neutral enough to be trusted with a tint nobody asked
+// for, so the tint is gone. Where a grey replaced a tinted one it keeps the
+// same luminance, so nothing changes but the hue.
+//
+// The warning and critical fills below are deliberately coloured and stay.
+inline lv_color_t bg()        { return lv_color_hex(0x000000); }
+inline lv_color_t statusBg()  { return lv_color_hex(0x0A0A0A); }
+inline lv_color_t panel()     { return lv_color_hex(0x000000); }
+inline lv_color_t line()      { return lv_color_hex(0x343434); }
+inline lv_color_t track()     { return lv_color_hex(0x161616); }
+inline lv_color_t text()      { return lv_color_hex(0xF0F0F0); }
+inline lv_color_t dim()       { return lv_color_hex(0x828282); }
+inline lv_color_t dotOff()    { return lv_color_hex(0x383838); }
 
 inline lv_color_t good()      { return lv_color_hex(0x57C08A); }
 inline lv_color_t warn()      { return lv_color_hex(0xE8A33D); }

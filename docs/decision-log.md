@@ -4,6 +4,64 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
+## The battery and fuel-pressure alarms start switched off
+
+Every alarm shipped enabled. Two of them should not.
+
+The battery alarm trips on a charging system that dips under load, which is
+most of them, and tells the driver something they already know. The fuel
+pressure alarm has a worse problem: which Analog In carries fuel pressure is
+still unconfirmed on this car, so the threshold may be watching a channel that
+measures something else entirely.
+
+An alarm that cries wolf does not cost nothing. It costs attention that the
+real ones need, and it teaches the driver to look away from the status bar.
+Both stay in the code, keep their thresholds, and are one tap away on the
+setup page — they just do not arrive armed.
+
+The settings version went to 3 to make this reach a device that already has a
+stored record. Nothing about the record's shape changed; the bump only forces
+the old one to be dropped. It takes brightness and the shift points with it,
+which have to be set once more after the update.
+
+---
+
+## The alarm list scrolls, and the page gets first refusal on a swipe
+
+The list holds 32 events and eleven fit on the screen, so a busy run put the
+oldest 21 somewhere the driver could not reach.
+
+Up and down now scroll it, a screen at a time with one row of overlap. The
+mechanism is a virtual on `DashPage`: a swipe is offered to the page on screen
+before it turns the page, and the page says whether it used it. Only the alarm
+list takes anything, and only up and down — left and right stay reserved for
+navigation everywhere, because a page that can trap the driver on itself is a
+page that gets sworn at in traffic. A scroll that has hit the end reports the
+swipe as unused rather than swallowing it.
+
+A new event resets the scroll to the top. The newest is the one worth reading,
+and it is the one that just happened.
+
+---
+
+## The palette is true greys now, because the panel is not neutral
+
+The pass that darkened the value tiles left them at colours like `0x0D1113` —
+green and blue a few counts above red. On paper that is a neutral so close to
+black that the tint should not exist. On the panel in the car it read as a
+green cast across every number on the screen.
+
+So every grey in the theme is now R = G = B, and the tile background is plain
+black. Where a tinted grey was replaced the luminance is unchanged, so the
+only difference is hue. The warning and critical fills stay coloured; they are
+supposed to be.
+
+The lesson is about the display rather than the design: a 3.5" IPS driven by
+an ILI9488 is not neutral enough to be trusted with a tint nobody asked for.
+If a colour is meant to read as black, make it black.
+
+---
+
 ## The log format is the EDL-1 frame, minus four bytes
 
 The `.emulog` file EMU Classic Client writes turned out to be a gzip stream
