@@ -21,12 +21,16 @@ public:
     const EngineDataModel& model() const { return model_; }
 
 private:
+    // Prints what the console missed. See the call site in loop().
+    void announce();
+
     HardwareSerial ecuUart_;
     EngineDataModel model_;
     EcuDataProvider provider_;
     SerialReport report_;
     DashUi ui_;
     bool displayReady_ = false;
+    bool consoleAnnounced_ = false;
 };
 
 }  // namespace ecu

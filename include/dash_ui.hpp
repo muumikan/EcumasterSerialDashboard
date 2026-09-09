@@ -45,6 +45,8 @@ public:
     // Applies the current settings everywhere and schedules a save.
     void settingsChanged();
 
+    const RtcClock& clock() const { return rtc_; }
+
 private:
     static constexpr uint8_t kPageCount = 6;
     static constexpr uint8_t kShiftSegments = 14;
