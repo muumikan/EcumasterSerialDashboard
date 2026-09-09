@@ -33,8 +33,14 @@ constexpr uint32_t kBootSweepMs = 2600;
 // the status bar, which is on screen whichever page is up.
 class DashUi {
 public:
-    void begin(lv_obj_t* screen);
-    void update(const EngineDataModel& model, uint32_t nowMs);
+    // The clock is borrowed, not owned: the log needs it for filenames and has
+    // to keep working when the display does not.
+    void begin(lv_obj_t* screen, const RtcClock& rtc);
+
+    // `clockTicked` is true on the pass where the RTC produced a fresh reading.
+    // The caller owns the tick, so the status bar and the alarm list's running
+    // durations still advance when the ECU has gone quiet.
+    void update(const EngineDataModel& model, uint32_t nowMs, bool clockTicked);
 
     void showPage(uint8_t index);
     void nextPage() { showPage(static_cast<uint8_t>((page_ + 1) % kPageCount)); }
@@ -44,8 +50,6 @@ public:
 
     // Applies the current settings everywhere and schedules a save.
     void settingsChanged();
-
-    const RtcClock& clock() const { return rtc_; }
 
 private:
     static constexpr uint8_t kPageCount = 6;
@@ -70,7 +74,7 @@ private:
 
     AlarmEngine alarms_;
     RunPeaks peaks_;
-    RtcClock rtc_;
+    const RtcClock* rtc_ = nullptr;
 
     DashSettings settings_;
     SettingsStore store_;

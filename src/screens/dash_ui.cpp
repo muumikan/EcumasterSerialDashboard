@@ -35,7 +35,8 @@ void settingsChangedCb(void* context) {
 
 }  // namespace
 
-void DashUi::begin(lv_obj_t* screen) {
+void DashUi::begin(lv_obj_t* screen, const RtcClock& rtc) {
+    rtc_ = &rtc;
     if (!store_.load(settings_)) {
         Serial.println(F("settings: no stored record, using defaults"));
     }
@@ -59,8 +60,6 @@ void DashUi::begin(lv_obj_t* screen) {
     pages_[3] = &alarmList_;
     pages_[4] = &diagnostics_;
     pages_[5] = &setup_;
-
-    rtc_.begin();
 
     for (uint8_t i = 0; i < kPageCount; ++i) {
         pages_[i]->create(pageArea_);
@@ -375,27 +374,26 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
     }
 
     char clock[sizeof(clockShown_)];
-    formatHm(rtc_.now(), clock, sizeof(clock));
+    formatHm(rtc_->now(), clock, sizeof(clock));
     if (strcmp(clock, clockShown_) != 0) {
         memcpy(clockShown_, clock, sizeof(clockShown_));
         lv_label_set_text(clockText_, clockShown_);
         lv_obj_set_style_text_color(
-            clockText_, rtc_.now().valid ? theme::text() : theme::dim(), 0);
+            clockText_, rtc_->now().valid ? theme::text() : theme::dim(), 0);
     }
 }
 
-void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
+void DashUi::update(const EngineDataModel& model, uint32_t nowMs, bool clockTicked) {
     const bool sweeping = runBootSweep(nowMs);
     const bool changed = model.revision() != lastRevision_;
     const LinkState link = model.linkState(nowMs);
-    const bool clockRead = rtc_.loop(nowMs);
 
     // Evaluated on a link change as well as on new data: losing the link is
     // exactly the case where no new data is coming, and it is an event the
     // list has to record.
     if (changed || link != lastLink_) {
         lastRevision_ = model.revision();
-        alarms_.evaluate(model.snapshot(), link, rtc_.now(), nowMs);
+        alarms_.evaluate(model.snapshot(), link, rtc_->now(), nowMs);
         if (changed) {
             peaks_.record(model.snapshot());
             if (!sweeping) {
@@ -415,9 +413,9 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs) {
     // is the one where data has stopped arriving.
     updateSummary(link);
 
-    // The clock read is in the condition so the status bar and the alarm list's
+    // The clock tick is in the condition so the status bar and the alarm list's
     // running durations tick along even when the ECU has gone quiet.
-    if (changed || lastLink_ != link || clockRead) {
+    if (changed || lastLink_ != link || clockTicked) {
         updateStatusBar(model, nowMs);
         pages_[page_]->update(model, alarms_, peaks_, nowMs);
     }
