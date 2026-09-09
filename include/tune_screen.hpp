@@ -16,7 +16,7 @@ public:
     const char* name() const override { return "TUNE"; }
 
 private:
-    Tile lambda_;
+    Tile afr_;
     lv_obj_t* targetLabel_ = nullptr;
     lv_obj_t* deviationFill_ = nullptr;
 

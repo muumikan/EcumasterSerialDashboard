@@ -10,24 +10,31 @@ namespace {
 constexpr lv_coord_t kCol = 160;
 constexpr lv_coord_t kRow = 95;
 
-// Deviation bar: lambda minus target, +/- 0.12 across the full width.
+// Deviation bar: AFR minus target, +/- 1.8 across the full width. That is the
+// same mixture error the bar showed when this tile read lambda - 0.12 lambda
+// is about 1.8 AFR on petrol - so the needle means what it always did.
 constexpr lv_coord_t kDevWidth = 288;
 constexpr lv_coord_t kDevHeight = 7;
-constexpr float kDevSpan = 0.12f;
+constexpr float kDevSpan = 1.8f;
+
+// Below this the ECU is not sending a target at all, and a deviation from zero
+// would peg the bar for the whole drive. Seen on this car: the 1.211 stream
+// carried afrTarget as 0.0 for an entire log.
+constexpr float kTargetPresent = 5.0f;
 
 }  // namespace
 
 void TuneScreen::create(lv_obj_t* parent) {
     root_ = makePanel(parent, 0, 0, theme::kPageWidth, theme::kPageHeight);
 
-    // ---- lambda vs target, two columns wide -----------------------------
-    lambda_.create(root_, 0, 0, kCol * 2, kRow, "LAMBDA / TARGET", "", &lv_font_montserrat_28);
-    lv_obj_align(lambda_.value(), LV_ALIGN_TOP_LEFT, 0, 20);
+    // ---- AFR vs target, two columns wide --------------------------------
+    afr_.create(root_, 0, 0, kCol * 2, kRow, "AFR / TARGET", "", &lv_font_montserrat_28);
+    lv_obj_align(afr_.value(), LV_ALIGN_TOP_LEFT, 0, 20);
 
-    targetLabel_ = makeCaption(lambda_.root(), "tgt --");
+    targetLabel_ = makeCaption(afr_.root(), "tgt --");
     lv_obj_align(targetLabel_, LV_ALIGN_TOP_LEFT, 96, 30);
 
-    lv_obj_t* devTrack = makePanel(lambda_.root(), 0, kRow - 8 - 8 - kDevHeight, kDevWidth, kDevHeight);
+    lv_obj_t* devTrack = makePanel(afr_.root(), 0, kRow - 8 - 8 - kDevHeight, kDevWidth, kDevHeight);
     lv_obj_set_style_bg_color(devTrack, theme::track(), 0);
     lv_obj_set_style_bg_opa(devTrack, LV_OPA_COVER, 0);
 
@@ -60,11 +67,19 @@ void TuneScreen::update(const EngineDataModel& model,
 
     char text[24];
 
-    lambda_.setFloat(s.wboLambda, 2);
-    snprintf(text, sizeof(text), "tgt %.2f", s.lambdaTarget);
+    afr_.setFloat(s.wboAfr, 1);
+
+    const bool haveTarget = s.afrTarget >= kTargetPresent;
+    if (haveTarget) {
+        snprintf(text, sizeof(text), "tgt %.1f", s.afrTarget);
+    } else {
+        snprintf(text, sizeof(text), "tgt --");
+    }
     lv_label_set_text(targetLabel_, text);
 
-    float deviation = (s.wboLambda - s.lambdaTarget) / kDevSpan;
+    // No target, no deviation. Measuring against zero would hold the bar hard
+    // over for the whole drive, which reads as a fault that is not there.
+    float deviation = haveTarget ? (s.wboAfr - s.afrTarget) / kDevSpan : 0.0f;
     if (deviation < -1.0f) deviation = -1.0f;
     if (deviation > 1.0f) deviation = 1.0f;
 
@@ -88,7 +103,9 @@ void TuneScreen::update(const EngineDataModel& model,
     tps_.setInt(s.tpsPct);
     rpm_.setInt(s.rpm);
 
-    lambda_.setSeverity(alarms.severity(AlarmId::Lean));
+    // Still the Lean alarm: it watches lambda, which is the same mixture this
+    // tile now shows in the other unit.
+    afr_.setSeverity(alarms.severity(AlarmId::Lean));
     knock_.setSeverity(alarms.severity(AlarmId::Knock));
     dutyCycle_.setSeverity(alarms.severity(AlarmId::InjectorDuty));
 }
