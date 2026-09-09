@@ -1,5 +1,21 @@
 #include "EDLSerial.h"
 
+// -----------------------------------------------------------------------------
+//  Vendored from ThiloZ/EDLSerial (MIT), then modified locally. The upstream
+//  README invites editing both source files, so the changes live here rather
+//  than in a wrapper.
+//
+//  parseFrame() below carries 22 local corrections to the channel decode. Each
+//  was found by cross-checking every field against Ecumaster's own format
+//  definition, docs/ecu-formats/version1_211.xml, whose `storage` attribute is
+//  authoritative for signedness and width. See lib/EDLSerial/README.md for the
+//  list and docs/decision-log.md for why the XML is trusted over the library.
+//
+//  Framing is NOT fixed here. The library still validates only the 4-byte
+//  marker and resynchronises by discarding whole buffers; EdlSerialAdapter
+//  works around both with a sliding window and a plausibility gate.
+// -----------------------------------------------------------------------------
+
 void EDLSerial::begin(Stream &stream) {
   _stream = &stream;
   _index = 0;
@@ -35,7 +51,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.Batt=(data[13] | (data[14] << 8)) / 37.0f;
   frame.TPSRate=(int8_t)data[15];
   frame.VE=(data[16] | (data[17] << 8)) / 10.0f;
-  frame.IgnAngle=data[18] / 2.0f;
+  frame.IgnAngle=(int8_t)data[18] / 2.0f;
   frame.Warmup=(uint8_t)data[19];
   frame.InjOpeningTime=data[20] / 32.0f;
   frame.EMUState=(uint8_t)data[21];
@@ -52,23 +68,23 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.idleControlActive=(uint8_t)data[38];
   frame.curentPIDCorrection=(int8_t)data[39];
   frame.dwellTime=data[40] / 20.0f;
-  frame.dwellError=data[41] / 62.0f;
+  frame.dwellError=(int8_t)data[41] / 62.0f;
   frame.overdwell=(uint8_t)data[42];
   frame.pulseWidth=(data[43] | (data[44] << 8)) / 62.0f;
   frame.ase=(uint8_t)data[45];
   frame.fuelCut=(uint8_t)data[46];
   frame.wboRI=data[47] / 51.0f;
-  frame.wboHeaterDC=(uint8_t)data[48];
+  frame.wboHeaterDC=(uint8_t)(data[48] * 100 / 127);
   frame.wboVS=data[49] / 51.0f;
   frame.accEnrich=(uint8_t)data[50];
   frame.accEnrichPW=(data[51] | (data[52] << 8)) / 62.0f;
   frame.egoCorrection=data[53] / 2.0f;
-  frame.wboIPMeas=(data[54] | (data[55] << 8)) / 128.0f;
-  frame.wboIPNorm=(data[56] | (data[57] << 8)) / 128.0f;
+  frame.wboIPMeas=(int16_t)(data[54] | (data[55] << 8)) / 128.0f;
+  frame.wboIPNorm=(int16_t)(data[56] | (data[57] << 8)) / 128.0f;
   frame.wboLambda=data[58] / 128.0f;
-  frame.pidPTerm=(data[59] | (data[60] << 8)) / 128.0f;
-  frame.pidITerm=(data[61] | (data[62] << 8)) / 32.0f;
-  frame.pidDTerm=(data[63] | (data[64] << 8)) / 128.0f;
+  frame.pidPTerm=(int16_t)(data[59] | (data[60] << 8)) / 128.0f;
+  frame.pidITerm=(int16_t)(data[61] | (data[62] << 8)) / 32.0f;
+  frame.pidDTerm=(int16_t)(data[63] | (data[64] << 8)) / 128.0f;
   frame.wasReset=(uint8_t)data[65];
   frame.engineNoise=data[66] / 51.0f;
   frame.wboAFR=data[67] / 10.0f;
@@ -78,9 +94,9 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.knockLevel=data[73] / 51.0f;
   frame.knockFuelEnrich=data[74] / 8.0f;
   frame.knockIgnRetard=data[75] / 8.0f;
-  frame.iatIgnTrim=data[76] / 2.0f;
-  frame.cltIgnTrim=data[77] / 2.0f;
-  frame.ignFromTable=data[78] / 2.0f;
+  frame.iatIgnTrim=(int8_t)data[76] / 2.0f;
+  frame.cltIgnTrim=(int8_t)data[77] / 2.0f;
+  frame.ignFromTable=(int8_t)data[78] / 2.0f;
   frame.vssFreq=(data[79] | (data[80] << 8)) / 4.0f;
   frame.vssSpeed=(data[81] | (data[82] << 8)) / 4.0f;
   frame.gearRatio=(data[83] | (data[84] << 8)) / 8.0f;
@@ -107,7 +123,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.boostPIDCorrection=(int8_t)data[107];
   frame.camSyncPrimTooth=(uint8_t)data[108];
   frame.nitrousActive=(uint8_t)data[109];
-  frame.nitrousIgnMod=data[110] / 2.0f;
+  frame.nitrousIgnMod=(int8_t)data[110] / 2.0f;
   frame.nitrousFuelScale=(uint8_t)data[111];
   frame.flatShiftActive=(uint8_t)data[112];
   frame.flatShiftCutSpark=(uint8_t)data[113];
@@ -115,7 +131,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.parametricOutput1=(uint8_t)data[115];
   frame.camSyncPresent=(uint8_t)data[116];
   frame.parametricOutput2=(uint8_t)data[117];
-  frame.accIgnCorr=data[118] / 2.0f;
+  frame.accIgnCorr=(int8_t)data[118] / 2.0f;
   frame.injDC=data[119] / 2.0f;
   frame.emuTemp=(int8_t)data[120];
   frame.iatFuelCorr=(uint8_t)data[121];
@@ -125,21 +141,21 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.cam2Angle=(data[126] | (data[127] << 8)) / 2.0f;
   frame.cam1ValveDC=(uint8_t)data[128];
   frame.cam2ValveDC=(uint8_t)data[129];
-  frame.cam1AngleTarget=(data[130] | (data[131] << 8)) / 2.0f;
-  frame.cam2AngleTarget=(data[132] | (data[133] << 8)) / 2.0f;
+  frame.cam1AngleTarget=(int16_t)(data[130] | (data[131] << 8)) / 2.0f;
+  frame.cam2AngleTarget=(int16_t)(data[132] | (data[133] << 8)) / 2.0f;
   frame.cam2Present=(uint8_t)data[134];
   frame.pitLimiterActive=(uint8_t)data[135];
   frame.pitLimiterTorqueReduction=(uint8_t)data[136];
   frame.oilPressure=data[137] / 16.0f;
   frame.oilTemperature=(uint8_t)data[138];
   frame.fuelPressure=data[139] / 32.0f;
-  frame.CLT=data[140] | (data[141] << 8);
-  frame.sparkCutPercent=(uint8_t)data[142];
+  frame.CLT=(int16_t)(data[140] | (data[141] << 8));
+  frame.sparkCutPercent=(uint8_t)(data[142] * 100 / 127);
   frame.etcDC=data[143] / 2.0f;
   frame.etcTarget=data[144] / 2.0f;
   frame.etcPos=data[145] / 2.0f;
-  frame.etcError=(data[146] | (data[147] << 8)) / 4.0f;
-  frame.etcDeltaError=data[148] / 4.0f;
+  frame.etcError=(int16_t)(data[146] | (data[147] << 8)) / 4.0f;
+  frame.etcDeltaError=(int8_t)data[148] / 4.0f;
   frame.tablesSet=(uint8_t)data[149];
   frame.vtecOn=(uint8_t)data[150];
   frame.flexFuelFrequency=(data[151] | (data[152] << 8)) / 2.0f;
@@ -151,7 +167,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.ffTemp=(int8_t)data[158];
   frame.ffTempFuelCorr=(uint8_t)data[159];
   frame.alsActive=(uint8_t)data[160];
-  frame.alsIgnAngle=data[161] / 2.0f;
+  frame.alsIgnAngle=(int8_t)data[161] / 2.0f;
   frame.alsSparkCut=(uint8_t)data[162];
   frame.alsFuelCorr=(int8_t)data[163];
   frame.ffBlendCrankingFuel=data[164] / 2.0f;
@@ -188,7 +204,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.ralTarget=data[210] | (data[211] << 8);
   frame.ralIgnition=data[212] / 2.0f;
   frame.ralActive=(uint8_t)data[213];
-  frame.etcFrictionCorr=data[214] / 2.0f;
+  frame.etcFrictionCorr=(int8_t)data[214] / 2.0f;
   frame.canSwitch=(uint8_t)data[219];
   frame.acPressure=data[220] | (data[221] << 8);
   frame.acClutch=(uint8_t)data[222];
@@ -208,7 +224,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.timer2=data[240] / 4.0f;
   frame.timerFuelEnrich=(uint8_t)data[241];
   frame.timerBoostCorr=(uint8_t)data[242];
-  frame.timerIgnCorr=data[243] / 2.0f;
+  frame.timerIgnCorr=(int8_t)data[243] / 2.0f;
   frame.nitrousFuelAdder=data[244] / 8.0f;
   frame.mswitchState=(uint8_t)data[245];
   frame.fcProbability=data[246] / 2.0f;
