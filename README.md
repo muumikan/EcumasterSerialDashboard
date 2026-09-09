@@ -144,9 +144,12 @@ Working: both serial protocols, data model, alarm engine, six pages, swipe
 navigation, settings in flash, the real-time clock, and SD logging.
 
 Two things to know about the parts that work. The log file is written and
-readable, but it does not open in EMU Classic Client — see
-[docs/emu-log-format.md](docs/emu-log-format.md), and its name is still a
-sequence number rather than a date. And the SD card has mounted intermittently
+readable, but it is in the wrong format — it does not open in EMU Classic
+Client, and on an EDL-1 car it captures nothing at all, because the logger
+still looks for classic 5-byte frames. The format the Client wants is now
+fully worked out and proven by writing one; see
+[docs/emu-log-format.md](docs/emu-log-format.md). Rewriting `EmuLog` against it
+is the next task, and dated filenames come with it. And the SD card has mounted intermittently
 on the bench for reasons nobody has established; `EmuLog` retries and says
 which attempt worked, so the console tells you if it happens again.
 

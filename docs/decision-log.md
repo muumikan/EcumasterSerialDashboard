@@ -4,6 +4,59 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
+## The log format is the EDL-1 frame, minus four bytes
+
+The `.emulog` file EMU Classic Client writes turned out to be a gzip stream
+over a 12-byte header and 256-byte records, where each record is the 260-byte
+EDL-1 frame with its `32 40 50 60` marker stripped. Nothing is assembled,
+scaled or reordered on the way in.
+
+This collapsed the logging task. The plan had been to synthesise a record
+format and reverse-engineer a field map; instead the map was already in the
+vendored decoder, and the file wants the bytes the UART is already delivering.
+The right design is therefore to tap the frame *before* decoding, not to build
+records out of decoded values — a decode bug can never corrupt a log that never
+went through the decoder.
+
+It also settles the EDL-1 choice made earlier for a different reason. Adopting
+EDL-1 was argued on channel count and simultaneous sampling; that it puts the
+exact bytes the log format wants on the wire was a guess at the time. It is now
+a fact.
+
+Established from Antti's own logs and CSV exports, then proven by writing a
+file that opens in the Client. Full account in
+[emu-log-format.md](emu-log-format.md).
+
+---
+
+## Ecumaster's XML outranks the vendored decoder
+
+`lib/EMUSerial-master/` is vendored unmodified, on the principle that the
+reference implementation is the specification available. `lib/EDLSerial/` is
+not, and the difference is that for EDL-1 a better specification exists:
+`docs/ecu-formats/version1_211.xml` is Ecumaster's own format definition, and
+its `storage` attribute states every channel's width and signedness.
+
+Checking all 195 fields against it found 22 the library decodes wrongly —
+mostly signed values read unsigned, so a small negative reading appears as a
+large positive one. Three were provably wrong in real logs: `wboIPMeas` and
+`wboIPNorm` in 83 % of samples, `dwellError` in 23 %. `IgnAngle`, which the
+dashboard displays, is among the latent ones: correct all through both sample
+logs and wrong the moment the ECU pulls timing.
+
+The fixes went into the library rather than a wrapper, because unlike the
+framing defects there is nothing to wrap — the information is destroyed at the
+point of the cast. Upstream's README invites editing the parser, and the
+changes are listed in [`lib/EDLSerial/README.md`](../lib/EDLSerial/README.md)
+so an upstream pull cannot quietly revert them.
+
+One field was deliberately left alone. `fcProbability` divides by 2 in the
+library and by 1 in the XML; upstream targeted firmware 1.226 against this
+project's 1.211, the channel is zero in every log available, and neither
+reading could be confirmed. An unverified change is not an improvement.
+
+---
+
 ## The alarm list is a log, not an operator's queue
 
 The list was first drawn with an acknowledge column and an ACK ALL button, the
@@ -342,11 +395,11 @@ implementation is the specification available.
   now retries three times 100 ms apart and reports which attempt worked, so a
   `card mounted on attempt 2` in the console is the signal that the fault is
   back. Vibration in the car is its own test of that contact.
-- **Log files are still numbered, not dated.** `/00019.emualog` and so on. Now
-  that the RTC is working and trusted, timestamped names are a small change
-  and the obvious next one. The format question in
-  [emu-log-format.md](emu-log-format.md) is still open separately: the file
-  written does not open in EMU Classic Client.
+- **`EmuLog` writes the wrong format entirely.** It captures classic 5-byte
+  frames, which the car no longer sends, so on EDL-1 the file stays empty. The
+  format EMU Classic Client actually wants is now settled and proven — see
+  [emu-log-format.md](emu-log-format.md) — and dated filenames fall out of the
+  rewrite, since the log's date lives in the filename and nowhere else.
 - **The Diag page's latched block is redundant.** The Alarms page supersedes
   it and does it properly. Removing the block frees about 60 px of the left
   column, which the link history would use well.
