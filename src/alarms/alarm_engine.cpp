@@ -63,11 +63,18 @@ AlarmSettings defaultAlarmSettings() {
     s.limits[static_cast<uint8_t>(AlarmId::OilPressure)]  = { 1.6f,  1.0f,  true };
     s.limits[static_cast<uint8_t>(AlarmId::Coolant)]      = { 100.0f, 108.0f, true };
     s.limits[static_cast<uint8_t>(AlarmId::Lean)]         = { 0.90f, 0.95f, true };
-    s.limits[static_cast<uint8_t>(AlarmId::BatteryLow)]   = { 13.2f, 12.4f, true };
+    // Off by default. A charging system that dips under load trips this on
+    // every drive without telling the driver anything they did not know, and
+    // an alarm that cries wolf costs attention the real ones need. Turn it on
+    // from the setup page when there is a reason to watch it.
+    s.limits[static_cast<uint8_t>(AlarmId::BatteryLow)]   = { 13.2f, 12.4f, false };
     s.limits[static_cast<uint8_t>(AlarmId::BatteryHigh)]  = { 15.0f, 15.5f, true };
     s.limits[static_cast<uint8_t>(AlarmId::Knock)]        = { 1.2f,  2.0f,  true };
     s.limits[static_cast<uint8_t>(AlarmId::InjectorDuty)] = { 85.0f, 92.0f, true };
-    s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 2.2f,  1.9f,  true };
+    // Off by default for the same reason, plus one of its own: which Analog In
+    // carries fuel pressure is still unconfirmed on this car, so the channel
+    // may not be measuring what the threshold assumes.
+    s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 2.2f,  1.9f,  false };
     s.limits[static_cast<uint8_t>(AlarmId::IntakeAir)]    = { 65.0f, 75.0f, true };
 
     // Six seconds, not three: on this engine oil pressure had not finished

@@ -13,8 +13,13 @@ constexpr char kKey[] = "cfg";
 // Bumped whenever DashSettings changes shape. A stored record with a different
 // version is ignored rather than reinterpreted, so a firmware update can never
 // come up with a threshold read out of the wrong bytes.
+//
+// Version 3 does not change the shape: it forces the stored record to be
+// dropped so the new defaults for the battery and fuel-pressure alarms take
+// effect. Everything else on the setup page reverts with it - brightness and
+// the shift points have to be set again once after this update.
 constexpr uint32_t kMagic = 0x45435544;  // 'ECUD'
-constexpr uint16_t kVersion = 2;
+constexpr uint16_t kVersion = 3;
 
 struct StoredSettings {
     uint32_t magic;
