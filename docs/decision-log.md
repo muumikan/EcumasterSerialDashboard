@@ -453,11 +453,6 @@ implementation is the specification available.
   now retries three times 100 ms apart and reports which attempt worked, so a
   `card mounted on attempt 2` in the console is the signal that the fault is
   back. Vibration in the car is its own test of that contact.
-- **`EmuLog` writes the wrong format entirely.** It captures classic 5-byte
-  frames, which the car no longer sends, so on EDL-1 the file stays empty. The
-  format EMU Classic Client actually wants is now settled and proven — see
-  [emu-log-format.md](emu-log-format.md) — and dated filenames fall out of the
-  rewrite, since the log's date lives in the filename and nowhere else.
 - **The Diag page's latched block is redundant.** The Alarms page supersedes
   it and does it properly. Removing the block frees about 60 px of the left
   column, which the link history would use well.

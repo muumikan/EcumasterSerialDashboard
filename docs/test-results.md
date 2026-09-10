@@ -5,6 +5,30 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-10 — .emulog logging opens in EMU Classic Client
+
+Environment `crowpanel_advance_35_edl`, first run of the rewritten `EmuLog`.
+
+**Confirmed on the car**
+
+- Logs written by the dashboard **open in EMU Classic Client and read the same
+  as ones the Client recorded itself**. Reported as working exactly as it
+  should.
+
+That closes the format question outright. It also confirms, indirectly, three
+things that had no test of their own: the ROM miniz compressor works on this
+chip, the SD write path holds up across a whole session, and the RTC is
+reachable from `AppController` after being moved out of `DashUi` — a log gets
+its name from the clock, so a file that opened at all had a name to open under.
+
+**Not yet exercised**
+
+Everything in the 9 September list below that is still open, plus the four UI
+changes made after this build was flashed. See the open items in the decision
+log.
+
+---
+
 ## 2026-09-09 — clock, alarm list and SD logging on the car
 
 Firmware: `0e2ef5c`, environment `crowpanel_advance_35_edl`. First run of the

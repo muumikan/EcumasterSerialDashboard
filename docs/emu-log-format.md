@@ -123,8 +123,8 @@ frame that passes its three framing checks to a `FrameSink` before decoding
 anything from it, and `EmuLog` drops four bytes and compresses. Nothing is
 decoded on the way into a log, so no decode bug can reach one.
 
-Untested on the car as of 9 September 2026: the algorithm is verified against
-real data on a PC, the SD write path is not.
+Confirmed on the car on 10 September 2026: logs written by the dashboard open
+in EMU Classic Client and read the same as ones the Client recorded itself.
 
 ## Still unknown
 

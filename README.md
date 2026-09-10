@@ -124,7 +124,7 @@ src/ecu/            EcuDataProvider — owns UART1
 src/alarms/         AlarmEngine — thresholds in one rule table, and the event log
 src/screens/        LVGL pages, tiles, chrome and navigation
 src/diagnostics/    diagnostics page and the serial text report
-src/logging/        EmuLog — raw frames to the SD card
+src/logging/        EmuLog — .emulog files to the SD card
 src/hal/            display, touch and RTC bring-up
 docs/               architecture, protocol, decisions
 hardware/ wiring/   pin assignment and the ECU-to-dash signal chain
@@ -143,13 +143,7 @@ alarm list behaves. See [docs/test-results.md](docs/test-results.md).
 Working: both serial protocols, data model, alarm engine, six pages, swipe
 navigation, settings in flash, the real-time clock, and SD logging.
 
-Two things to know about the parts that work. The log file is written and
-readable, but it is in the wrong format — it does not open in EMU Classic
-Client, and on an EDL-1 car it captures nothing at all, because the logger
-still looks for classic 5-byte frames. The format the Client wants is now
-fully worked out and proven by writing one; see
-[docs/emu-log-format.md](docs/emu-log-format.md). Rewriting `EmuLog` against it
-is the next task, and dated filenames come with it. And the SD card has mounted intermittently
+One thing to know about the parts that work. The SD card has mounted intermittently
 on the bench for reasons nobody has established; `EmuLog` retries and says
 which attempt worked, so the console tells you if it happens again.
 
