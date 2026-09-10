@@ -21,11 +21,35 @@ chip, the SD write path holds up across a whole session, and the RTC is
 reachable from `AppController` after being moved out of `DashUi` — a log gets
 its name from the clock, so a file that opened at all had a name to open under.
 
+**Also confirmed the same day**
+
+Four things that had been carried as untested since the first run on 8
+September, all reported working:
+
+- **Settings survive a power cycle.** The stale NVS record that blocked this
+  test earlier has been overwritten, so it could finally be checked at all.
+- **Backlight PWM, brightness and night mode.**
+- **The Setup page's Limits category.** This is the screen that builds the
+  most LVGL objects of any page, and it was the standing worry about object
+  pool headroom. It behaves.
+- **The check-engine bit numbering.** Confirmed by the intended test -
+  unplugging the intake air sensor and watching which flag lights. The
+  numbering was an inference until now; it is right.
+
+**Cannot be tested on this car**
+
+- **`IgnAngle` going negative.** One of the 22 decoder fixes, and the only one
+  that reaches the screen. The ECU has to pull timing below zero to exercise
+  it - knock retard, launch control, ALS - and this setup does not do that.
+  The fix stands on Ecumaster's own format definition, which declares the
+  channel `sbyte`, rather than on a measurement. Recorded so it stops
+  appearing on test lists.
+
 **Not yet exercised**
 
-Everything in the 9 September list below that is still open, plus the four UI
-changes made after this build was flashed. See the open items in the decision
-log.
+The four UI changes made after this build was flashed - the AFR tile, alarm
+list scrolling, the black palette and the two alarms defaulting off - plus
+what the open items in the decision log still list.
 
 ---
 

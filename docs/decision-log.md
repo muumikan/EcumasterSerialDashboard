@@ -439,8 +439,6 @@ implementation is the specification available.
   `afrTarget` and `scondarypulseWidth` as separate fields at fixed offsets. It
   still applies to the classic environment; see
   [ecu-protocol.md](ecu-protocol.md#version-mismatch-channel-33).
-- **The check-engine bit numbering is an inference.** Confirm it by unplugging
-  the intake air sensor and checking that IAT is the flag that lights.
 - **160 EDL-1 channels are decoded but not displayed.** Listed in
   [edl-channels.md](edl-channels.md); boost control, knock-versus-noise,
   trigger health and idle control are the ones this car can actually use.
@@ -464,10 +462,11 @@ implementation is the specification available.
   second. LVGL coalesces the redraw, but the formatting work is done every
   time. Rate-limiting to about 20 Hz would cut it by an order of magnitude and
   make the digits readable rather than a blur.
-- **LVGL object pool headroom is unmeasured.** `LV_MEM_SIZE` is 96 kB. The
-  Setup page's Limits category builds the most objects of any screen; if it
-  ever comes up blank or the dash restarts on the way to it, that is the first
-  thing to raise.
+- **LVGL object pool headroom is still unmeasured, but no longer suspect.**
+  `LV_MEM_SIZE` is 96 kB, and the Setup page's Limits category - the screen
+  that builds the most objects - was exercised on the car and behaves. The
+  number has never been read; if a future page ever comes up blank or the dash
+  restarts on the way to one, this is the first thing to raise.
 - **Enclosure dimensions are not verified.** `enclosure/case.scad` is
   parametric and its geometry is right, but the measurements at the top of the
   file are placeholders. They must be taken from Elecrow's STEP model or the
