@@ -8,6 +8,7 @@
 #include "engine_data_model.hpp"
 #include "rtc_clock.hpp"
 #include "serial_report.hpp"
+#include "service_ap.hpp"
 #include "settings_store.hpp"
 
 namespace ecu {
@@ -54,6 +55,8 @@ private:
     // setting, and the log has to work on a dashboard whose screen failed.
     DashSettings settings_;
     SettingsStore store_;
+
+    ServiceAp serviceAp_;
 
     DashUi ui_;
     bool displayReady_ = false;

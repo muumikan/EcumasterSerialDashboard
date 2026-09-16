@@ -37,6 +37,7 @@ void AppController::begin() {
     // whose screen failed should still record the drive.
     rtc_.begin();
     openLogWhenNamed();
+    serviceAp_.begin(settings_);
 
     displayReady_ = display::begin();
     if (displayReady_) {
@@ -210,6 +211,7 @@ void AppController::loop() {
     provider_.loop(nowMs);
     rotateLogWhenEngineStops(nowMs);
     saveSettingsWhenSettled(nowMs);
+    serviceAp_.loop(model_, nowMs);
 
     if (displayReady_) {
         ui_.update(model_, nowMs, clockTicked);
