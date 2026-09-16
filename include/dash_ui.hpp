@@ -13,6 +13,7 @@
 #include "idle_screen.hpp"
 #include "main_screen.hpp"
 #include "rtc_clock.hpp"
+#include "service_status.hpp"
 #include "setup_screen.hpp"
 #include "temps_screen.hpp"
 #include "tune_screen.hpp"
@@ -66,7 +67,7 @@ public:
 
     // State of the service access point, for the status bar. Pushed in rather
     // than read out: the UI does not otherwise know the radio exists.
-    void setServiceState(bool serving, uint8_t clients);
+    void setServiceState(const ServiceApStatus& status);
 
     // The alarm log, for the service page. Lives here because the alarms are
     // evaluated as the UI updates.

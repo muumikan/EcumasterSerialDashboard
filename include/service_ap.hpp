@@ -4,6 +4,7 @@
 
 #include "dash_settings.hpp"
 #include "engine_data_model.hpp"
+#include "service_status.hpp"
 
 namespace ecu {
 
@@ -53,6 +54,9 @@ public:
 
     const char* ssid() const;
     const char* ipAddress() const { return ip_; }
+
+    // The subset the screens get. See service_status.hpp.
+    ServiceApStatus status() const;
 
 private:
     void start();

@@ -26,6 +26,16 @@ void ServiceAp::begin(const DashSettings& settings) {
 
 const char* ServiceAp::ssid() const { return service::kSsid; }
 
+ServiceApStatus ServiceAp::status() const {
+    ServiceApStatus out;
+    out.serving = state_ == State::Serving;
+    out.clients = clients_;
+    out.ssid = service::kSsid;
+    out.password = service::kPassword;
+    out.ip = ip_;
+    return out;
+}
+
 bool ServiceAp::engineStopped(const EngineDataModel& model, uint32_t nowMs) const {
     const LinkState link = model.linkState(nowMs);
     if (link == LinkState::Offline) {

@@ -12,8 +12,19 @@ the car anyway, so they go to it directly rather than through anywhere else.
 | Password | `ecudash1` (WPA2) |
 | Address | `http://192.168.4.1/` |
 
-Both are compile-time constants in `include/service_config.hpp`. The panel has a
+These are compile-time constants in `include/service_config.hpp`. The panel has a
 plus and a minus button and cannot enter text, so they are not editable there.
+
+The network and the key are also shown on the dashboard's own **DIAG** page,
+under the peaks, so they can be read while standing beside the car rather than
+looked up. The network name turns green and gains a count once a laptop has
+actually joined - which is the difference between "the radio is up" and "I am
+on it". The address is not shown there: it is always `192.168.4.1`, and the page
+had room for two rows.
+
+The status bar carries the short form on every page: `WIFI`, or `WIFI 1` once
+someone has joined. It is blank whenever the radio is off, which is whenever the
+car is moving.
 
 ## When the access point is up
 

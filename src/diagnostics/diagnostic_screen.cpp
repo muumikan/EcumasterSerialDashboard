@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "dash_theme.hpp"
+#include "service_status.hpp"
 #include "ui_tile.hpp"
 
 namespace ecu {
@@ -85,6 +86,50 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     for (int i = 0; i < 11; ++i) {
         peakValues_[i] = makeRow(right, 18 + kRowHeight * i, kPeakCaptions[i]);
     }
+
+    // ---- service access point -------------------------------------------
+    // Under the peaks, in the space they leave: the last peak row ends around
+    // y=204 and the padded column ends at 266, which is a heading and two
+    // rows. The address is the row that lost the argument for the third - it
+    // is always 192.168.4.1, while the network and the key are the two things
+    // that have to be read off the screen while standing beside the car.
+    makeHeading(right, 208, "SERVICE AP");
+    apNetwork_ = makeRow(right, 226, "Network");
+    apKey_ = makeRow(right, 243, "Key");
+}
+
+void DiagnosticScreen::setServiceState(const ServiceApStatus& status) {
+    if (apNetwork_ == nullptr) {
+        return;
+    }
+    if (status.serving == apServing_ && status.clients == apClients_) {
+        return;
+    }
+    apServing_ = status.serving;
+    apClients_ = status.clients;
+
+    if (!status.serving) {
+        lv_label_set_text(apNetwork_, "off");
+        lv_obj_set_style_text_color(apNetwork_, theme::dim(), 0);
+        lv_label_set_text(apKey_, status.password);
+        lv_obj_set_style_text_color(apKey_, theme::dim(), 0);
+        return;
+    }
+
+    // The client count rides along with the network name rather than taking a
+    // row of its own - there is no third row here. Green once a laptop has
+    // actually joined, which is the question being asked of this page.
+    char text[28];
+    if (status.clients > 0) {
+        snprintf(text, sizeof(text), "%s (%u)", status.ssid, status.clients);
+    } else {
+        snprintf(text, sizeof(text), "%s", status.ssid);
+    }
+    lv_label_set_text(apNetwork_, text);
+    lv_obj_set_style_text_color(apNetwork_, theme::good(), 0);
+
+    lv_label_set_text(apKey_, status.password);
+    lv_obj_set_style_text_color(apKey_, theme::text(), 0);
 }
 
 void DiagnosticScreen::update(const EngineDataModel& model,

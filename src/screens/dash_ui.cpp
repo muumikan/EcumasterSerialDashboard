@@ -91,7 +91,13 @@ void DashUi::applySettings() {
     litSegments_ = 0xFF;  // shift points may have moved; force a repaint
 }
 
-void DashUi::setServiceState(bool serving, uint8_t clients) {
+void DashUi::setServiceState(const ServiceApStatus& status) {
+    // The page is told first and keeps its own comparison: the status bar and
+    // the DIAG page are repainted from the same push.
+    diagnostics_.setServiceState(status);
+
+    const bool serving = status.serving;
+    const uint8_t clients = status.clients;
     if (serving == apServing_ && clients == apClients_) {
         return;
     }

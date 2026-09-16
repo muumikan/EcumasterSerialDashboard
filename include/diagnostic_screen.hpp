@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dash_page.hpp"
+#include "service_status.hpp"
 
 namespace ecu {
 
@@ -13,6 +14,10 @@ public:
                 const RunPeaks& peaks,
                 uint32_t nowMs) override;
     const char* name() const override { return "DIAG"; }
+
+    // Pushed in from above rather than read out: this page knows what the
+    // access point is called, not what one is.
+    void setServiceState(const ServiceApStatus& status);
 
 private:
     // Link column.
@@ -29,6 +34,12 @@ private:
 
     // Peaks column.
     lv_obj_t* peakValues_[11] = {};
+
+    // Service access point, under the peaks.
+    lv_obj_t* apNetwork_ = nullptr;
+    lv_obj_t* apKey_ = nullptr;
+    bool apServing_ = false;
+    uint8_t apClients_ = 0xFF;
 };
 
 }  // namespace ecu
