@@ -62,6 +62,10 @@ public:
     // Applies the current settings to the UI and tells the owner.
     void settingsChanged();
 
+    // The alarm log, for the service page. Lives here because the alarms are
+    // evaluated as the UI updates.
+    const AlarmEngine& alarms() const { return alarms_; }
+
     // Re-reads the settings after someone else changed them - the service
     // page, which edits the same struct from outside the UI.
     void settingsReloaded() { applySettings(); }

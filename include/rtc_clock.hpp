@@ -12,7 +12,9 @@ namespace ecu {
 // peripheral directly for the touch panel, and a second driver configuring the
 // same registers is asking for trouble.
 //
-// Read-only in normal running. The one write is the seed described below.
+// Read-only in normal running, with two exceptions: the seed described below,
+// and the service page setting the clock from the laptop's own. Both are
+// deliberate, and neither happens while driving.
 class RtcClock {
 public:
     // Probes the part and, if it has lost time, seeds it from the build clock.
@@ -25,6 +27,12 @@ public:
 
     const DateTime& now() const { return now_; }
     bool present() const { return present_; }
+
+    // Set the clock from outside. The dashboard has no network and no GPS, so
+    // its only other source of time is the build stamp, which drifts from the
+    // moment it is written. The laptop that comes to fetch the logs knows the
+    // real time, so it is asked for it.
+    bool setTime(const DateTime& t);
 
 private:
     bool readTime(DateTime& out) const;

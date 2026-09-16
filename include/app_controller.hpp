@@ -9,6 +9,7 @@
 #include "rtc_clock.hpp"
 #include "serial_report.hpp"
 #include "service_ap.hpp"
+#include "service_page.hpp"
 #include "settings_store.hpp"
 
 namespace ecu {
@@ -42,6 +43,9 @@ private:
     // Writes the settings once the edits have stopped. See kSettingsSaveDelayMs.
     void saveSettingsWhenSettled(uint32_t nowMs);
 
+    // Runs LVGL while the server is busy sending a file. See ServiceContext.
+    static void pumpDisplay(void* context);
+
     HardwareSerial ecuUart_;
     EngineDataModel model_;
     EcuDataProvider provider_;
@@ -57,6 +61,7 @@ private:
     SettingsStore store_;
 
     ServiceAp serviceAp_;
+    ServicePage servicePage_;
 
     DashUi ui_;
     bool displayReady_ = false;

@@ -46,8 +46,29 @@ void AppController::begin() {
         Serial.println(F("display: LVGL buffer allocation failed, running headless"));
     }
 
+    ServiceContext service;
+    service.log = &provider_.log();
+    service.model = &model_;
+    service.rtc = &rtc_;
+    service.ap = &serviceAp_;
+    service.alarms = displayReady_ ? &ui_.alarms() : nullptr;
+    service.settings = &settings_;
+    service.onSettingsChanged = settingsChangedCb;
+    service.pump = pumpDisplay;
+    service.context = this;
+    servicePage_.begin(service);
+
     Serial.println();
     Serial.println(F("ECU dashboard - EMU Classic serial link (read-only)"));
+}
+
+// Sending a few megabytes off the card is seconds of work. Without this the
+// screen would be frozen for all of it, which on a dashboard reads as a crash.
+void AppController::pumpDisplay(void* context) {
+    AppController* self = static_cast<AppController*>(context);
+    if (self->displayReady_) {
+        display::loop();
+    }
 }
 
 // Everything this firmware has to say about its own state is printed inside
@@ -163,6 +184,12 @@ void AppController::rotateLogWhenEngineStops(uint32_t nowMs) {
 }
 
 void AppController::settingsChanged() {
+    // The service page edits the same struct the panel does, so the UI has to
+    // be told either way. Applying twice after a panel edit costs nothing.
+    if (displayReady_) {
+        ui_.settingsReloaded();
+    }
+
     settingsDirty_ = true;
     saveDueMs_ = millis() + kSettingsSaveDelayMs;
 
@@ -212,6 +239,7 @@ void AppController::loop() {
     rotateLogWhenEngineStops(nowMs);
     saveSettingsWhenSettled(nowMs);
     serviceAp_.loop(model_, nowMs);
+    servicePage_.loop(serviceAp_.serving());
 
     if (displayReady_) {
         ui_.update(model_, nowMs, clockTicked);

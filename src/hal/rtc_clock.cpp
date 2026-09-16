@@ -149,6 +149,18 @@ bool RtcClock::begin() {
     return true;
 }
 
+bool RtcClock::setTime(const DateTime& t) {
+    if (!present_ || !t.valid) {
+        return false;
+    }
+    if (!writeTime(t)) {
+        return false;
+    }
+    now_ = t;
+    nextReadMs_ = millis() + kReadIntervalMs;
+    return true;
+}
+
 bool RtcClock::loop(uint32_t nowMs) {
     if (!present_ || static_cast<int32_t>(nowMs - nextReadMs_) < 0) {
         return false;
