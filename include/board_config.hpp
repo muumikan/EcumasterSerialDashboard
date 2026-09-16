@@ -40,13 +40,19 @@ constexpr int8_t kEcuTxPin = 17;  // UART1-OUT TX - assigned, never driven
 constexpr uint32_t kDebugBaud = 115200;
 
 // ----------------------------------------------------------------- Display --
-// ILI9488 on SPI2_HOST. The panel itself is 320x480 portrait; offset_rotation
-// 3 presents it as 480x320 landscape.
+// ILI9488 on SPI2_HOST. The panel itself is 320x480 portrait; an odd
+// offset_rotation presents it as 480x320 landscape.
 constexpr uint16_t kLcdWidth = 480;
 constexpr uint16_t kLcdHeight = 320;
 constexpr uint16_t kPanelWidth = 320;
 constexpr uint16_t kPanelHeight = 480;
-constexpr uint8_t kPanelRotation = 3;
+
+// 1 rather than 3: the same landscape, turned 180 degrees, which puts the USB
+// socket on the reachable side once the dash is mounted in the car. Nothing
+// else has to change for it - LovyanGFX folds this into the rotation it
+// converts raw touch coordinates with, so the touch panel turns with the
+// image rather than needing its own correction.
+constexpr uint8_t kPanelRotation = 1;
 
 constexpr int8_t kLcdSclkPin = 42;
 constexpr int8_t kLcdMosiPin = 39;

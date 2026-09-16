@@ -30,6 +30,13 @@ rather than reconstructed at it.
   `BOOST PID` are signed; a reading that never goes below zero is suspect.
 - **Eight page dots still clear the page name.** The dot pitch was tightened
   from 10 px to 8 px for this. Read on the panel, not in a screenshot.
+- **The display is the right way up, and touch agrees with it.** The panel is
+  now rotated 180 degrees so the USB socket faces the reachable side. The
+  image is the easy half to confirm; the half worth actually testing is touch,
+  because a transform that did not turn with the image would still register
+  presses - just mirrored. Swipe the pages left and right, and press a Setup
+  button near an edge rather than in the middle, where a mirrored hit and the
+  intended one land in the same place.
 - **The pages exist and are reachable** without the object pool running out -
   see the standing worry in [decision-log.md](decision-log.md).
 
