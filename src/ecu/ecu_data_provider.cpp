@@ -6,14 +6,10 @@ namespace ecu {
 
 EcuDataProvider::EcuDataProvider(HardwareSerial& uart, EngineDataModel& model)
     : uart_(uart), model_(model), log_(), adapter_(uart) {
-#if defined(ECU_LINK_EDL)
+    // Every frame the adapter accepts goes to the log as well as the model.
+    // The .emulog record *is* an EDL-1 frame with its marker stripped, so this
+    // is a tee, not a second decode - see emu_log.hpp.
     adapter_.setSink(&log_);
-#else
-    // The .emulog record *is* an EDL-1 frame. The classic protocol's 5-byte
-    // per-channel frames cannot express one, and a log assembled out of
-    // decoded values would be a different file format wearing the same name.
-    log_.disable("EDL-1 only; this build listens to the classic protocol");
-#endif
 }
 
 void EcuDataProvider::begin() {

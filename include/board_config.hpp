@@ -15,11 +15,8 @@
 namespace board {
 
 // ---------------------------------------------------------------- ECU link --
-// EMU Classic streams its data log at 19200 baud, 8N1.
-constexpr uint32_t kEcuBaud = 19200;
-
-// The EDL-1 logger stream runs faster: 260-byte frames at 115200, 8N1.
-// Selected at build time - see ecu_link.hpp.
+// The EMU's EDL-1 logger stream: 260-byte frames at 115200 baud, 8N1. The ECU
+// has to be configured to send it - see ecu_link.hpp.
 constexpr uint32_t kEcuBaudEdl = 115200;
 
 // UART1-OUT connector on the CrowPanel, fed from the MAX3232 RS232-TTL

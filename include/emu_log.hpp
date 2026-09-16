@@ -34,8 +34,9 @@ namespace ecu {
 //    costs at most the bytes since the last flush, and `end()` exists for
 //    tidiness rather than correctness.
 //
-// EDL-1 only. The classic protocol's 5-byte frames cannot express this format
-// at all - see EcuDataProvider, which does not attach a logger in that build.
+// EDL-1 only, which is now the only protocol this firmware speaks. The classic
+// protocol's 5-byte frames could not express this format at all, and that is
+// part of why the classic build was dropped - see ecu_link.hpp.
 class EmuLog : public FrameSink {
 public:
     // Mounts the card and opens "/YYYYMMDD_HHMM_SS.emulog". The date lives in

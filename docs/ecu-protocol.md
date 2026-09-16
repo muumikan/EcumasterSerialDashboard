@@ -1,8 +1,11 @@
 # EMU Classic serial protocol
 
 > This describes the **classic** protocol, one channel per 5-byte frame. The
-> car now runs the **EDL-1** protocol instead: 260-byte frames carrying all 195
-> channels at once. Both are in the tree, chosen at build time. The EDL-1
+> car runs the **EDL-1** protocol instead: 260-byte frames carrying all 195
+> channels at once, and since the classic build was removed that is the only
+> protocol in the tree. **Nothing here is built any more** - this file is kept
+> as a record of the protocol and of why the decoder behaved as it did, not as
+> documentation of code you will find. The EDL-1
 > framing and its lack of a checksum are covered in
 > [architecture.md](architecture.md) and the
 > [decision log](decision-log.md); its channels are listed in
@@ -109,10 +112,11 @@ Nothing else differs. Channels 1-32 and 255 are identical in both versions, and
 
 ## Liveness
 
-`EMUSerial::checkEmuSerial()` returns `void` and `decodeEmuFrame()` is
-private, so there is no frame counter to read. `EmuSerialAdapter` therefore
-reports **bytes consumed**, and `EngineDataModel` treats byte activity as
-evidence the link is alive.
+`EMUSerial::checkEmuSerial()` returned `void` and `decodeEmuFrame()` was
+private, so there was no frame counter to read. `EmuSerialAdapter` therefore
+reported **bytes consumed**, and `EngineDataModel` treated byte activity as
+evidence the link was alive. EDL-1 counts real frames, so this caveat no longer
+applies to anything that is built.
 
 The consequence is honest to state: line noise on an otherwise dead link would
 read as `Online`. In practice a floating RS-232 receiver input is quiet, so

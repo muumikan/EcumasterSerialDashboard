@@ -25,21 +25,24 @@ only knows the one under it.
               ▼
         EcuDataProvider           owns UART1, stamps arrival times
               ▼
-        EcuLinkAdapter            EmuSerialAdapter (classic, 34 channels)
-                                  EdlSerialAdapter (EDL-1, 195 channels)
-              ▼                   chosen at build time by ecu_link.hpp
+        EcuLinkAdapter            EdlSerialAdapter - EDL-1, 195 channels
+              ▼                   named by ecu_link.hpp
         UART1  ◀── MAX3232 ◀── EMU Classic
 ```
 
 ## The layers
 
-### Adapters — `src/protocol/`
+### Adapter — `src/protocol/`
 
-Two, for the EMU's two serial protocols, behind one interface. `ecu_link.hpp`
-picks between them at build time and supplies the matching baud rate; nothing
-above this layer knows which is in use. This is the seam the layering existed
-for, and swapping protocols cost no change to the model, the alarms, the
-screens or the settings.
+One, behind an interface that could hold more. `ecu_link.hpp` names it and
+supplies the baud rate; nothing above this layer knows what a frame is.
+
+There were two. The EMU's older 35-channel serial protocol lived here beside
+EDL-1, chosen by a build flag, until it was removed: the car runs EDL-1, and
+the classic build could not log at all, because the `.emulog` record *is* an
+EDL-1 frame. It was compiled on every change and never once run. The seam it
+justified is worth keeping anyway — swapping protocols cost no change to the
+model, the alarms, the screens or the settings, and would not again.
 
 #### EdlSerialAdapter
 
@@ -55,19 +58,8 @@ marker appears exactly 260 bytes later, and a plausibility check that rejects
 values which cannot be real. The adapter keeps the last *good* frame rather
 than the last frame, so a bad sample never reaches the run peaks.
 
-#### EmuSerialAdapter
-
-Wraps [GTO2013/EMUSerial](https://github.com/GTO2013/EMUSerial) unmodified and
-translates its `emu_data_t` into `EngineSnapshot`. Nothing is re-scaled here:
-the decoder already produces engineering units, and inventing a conversion
-would mean inventing protocol. This is the only file in the project that
-includes `EMUSerial.h`.
-
-It reports bytes consumed rather than frames decoded, because
-`checkEmuSerial()` returns nothing and `decodeEmuFrame` is private. That byte
-count is what liveness is derived from — see the caveat in
-[decision-log.md](decision-log.md). Its bad-frame count is always zero for the
-same reason: the decoder surfaces no failures to count.
+Every frame it accepts is also handed to the logger, which strips the four-byte
+marker and compresses the rest. That is a tee, not a second decode.
 
 ### EngineDataModel — `src/data_model/`
 
