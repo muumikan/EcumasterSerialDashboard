@@ -29,6 +29,14 @@ public:
     void adjust(uint16_t itemIndex, int8_t direction);
     void selectCategory(uint8_t index);
 
+    // Repaint every row from the settings, for when they were changed by
+    // something other than these buttons - the service page edits the same
+    // struct, and until this existed the panel went on showing the old number.
+    //
+    // In place, never a rebuild, for the same reason adjust() refreshes rather
+    // than rebuilds: this can be reached from inside a button's own callback.
+    void refresh();
+
 private:
     static constexpr uint8_t kMaxRows = 20;
     static constexpr uint8_t kMaxCategories = 6;

@@ -69,7 +69,15 @@ everything" form: the page confirms a list and the server acts on that list.
 **Name the next drive.** Text appended to the next log file's name, so a tuning
 day's runs can be told apart. Anything outside `[A-Za-z0-9_-]` is replaced.
 
-**Settings.** The same fields the panel edits, generated from the shared table in
+**Settings.** Changes apply to the dashboard the moment the server accepts them
+- the page writes into the same `DashSettings` the panel edits, then the owner
+re-applies alarm limits and brightness and repaints the SETUP page's rows. The
+flash write is debounced by four seconds after the last edit, the same as a held
+button on the panel, so a change made and then powered off inside four seconds is
+lost. The value that comes back from the server is the clamped one and may differ
+from what was typed.
+
+The same fields the panel edits, generated from the shared table in
 `include/setup_items.hpp`, clamped by the same ranges and applied through the
 same path. Neither editor can drift from the other, and neither is a way around
 the rule that only numbers and switches are editable - which value an alarm

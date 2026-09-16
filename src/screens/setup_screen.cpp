@@ -258,6 +258,16 @@ void SetupScreen::refreshRow(uint16_t itemIndex) {
     lv_label_set_text(valueLabels_[itemIndex], buffer);
 }
 
+void SetupScreen::refresh() {
+    if (settings_ == nullptr) {
+        return;
+    }
+    const uint8_t count = kSetupCategories[category_].count;
+    for (uint8_t i = 0; i < count && i < kMaxRows; ++i) {
+        refreshRow(i);
+    }
+}
+
 void SetupScreen::selectCategory(uint8_t index) {
     if (index >= kSetupCategoryCount || index == category_) {
         return;

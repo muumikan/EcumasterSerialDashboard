@@ -86,6 +86,7 @@ void DashUi::begin(lv_obj_t* screen,
 
 void DashUi::applySettings() {
     alarms_.settings() = settings_->alarms;
+    setup_.refresh();
     display::setBrightness(settings_->nightMode ? settings_->nightBrightnessPct
                                                : settings_->brightnessPct);
     litSegments_ = 0xFF;  // shift points may have moved; force a repaint

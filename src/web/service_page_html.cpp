@@ -350,7 +350,43 @@ $("saveSession").onclick=function(){
 };
 
 /* ---- settings ---- */
+/* The form is built once and then patched in place. Rebuilding it after every
+   edit - which is what this did first - threw away the focus, jumped the
+   scroll back to the top and replaced the field under the cursor, so a page
+   that worked read as a page that was broken. */
+var setData=null;
+
+function markChanged(it,cell){
+ var diff=Math.abs(it.value-it["default"])>1e-6;
+ cell.className=diff?"chg":"";
+ var n=0;
+ setData.categories.forEach(function(c){c.items.forEach(function(x){
+  if(Math.abs(x.value-x["default"])>1e-6)n++})});
+ $("setCount").textContent=n+" setting"+(n===1?"":"s")+" differ from defaults";
+}
+
+function sendSetting(el){
+ var ci=+el.dataset.c, ii=+el.dataset.i;
+ var it=setData.categories[ci].items[ii];
+ var v=el.type==="checkbox"?(el.checked?1:0):el.value;
+ el.disabled=true;
+ post("/api/settings","category="+ci+"&index="+ii+"&value="+encodeURIComponent(v))
+  .then(function(r){if(!r.ok)throw 0;return r.json()})
+  .then(function(d){
+   /* The server clamps, so what comes back is the truth and may differ from
+      what was typed. */
+   it.value=d.value;
+   if(el.type==="checkbox"){el.checked=d.value>0.5}
+   else{el.value=d.value.toFixed(it.decimals)}
+   markChanged(it,el.parentNode);
+   toast("Applied \u2014 stored a few seconds after the last change");
+  })
+  .catch(function(){toast("The dashboard refused that value");loadSettings()})
+  .then(function(){el.disabled=false;el.focus()});
+}
+
 function loadSettings(){fetch("/api/settings").then(function(r){return r.json()}).then(function(d){
+ setData=d;
  var h="",changed=0;
  d.categories.forEach(function(cat,ci){
   h+='<div class="block"><h2>'+esc(cat.name)+'</h2><div class="scroll"><table><thead><tr>'+
@@ -359,25 +395,24 @@ function loadSettings(){fetch("/api/settings").then(function(r){return r.json()}
    var diff=Math.abs(it.value-it["default"])>1e-6; if(diff)changed++;
    var ctl=it["bool"]
     ?'<input type="checkbox" data-c="'+ci+'" data-i="'+ii+'" class="sv"'+(it.value>0.5?" checked":"")+'>'
+    /* step="any" on purpose: the real step is in the Allowed column, and a
+       browser validating 0.88 against step 0.01 in binary floating point
+       marks a perfectly good value invalid. The server clamps regardless. */
     :'<input type="number" class="sv" data-c="'+ci+'" data-i="'+ii+'" value="'+
-      it.value.toFixed(it.decimals)+'" min="'+it.min+'" max="'+it.max+'" step="'+(it.step||1)+'">';
+      it.value.toFixed(it.decimals)+'" min="'+it.min+'" max="'+it.max+'" step="any">';
    h+='<tr><td>'+esc(it.key)+'</td><td'+(diff?' class="chg"':'')+'>'+ctl+'</td>'+
     '<td class="unit">'+esc(it.unit)+'</td><td class="range">'+
-    (it["bool"]?"off / on":it.min+" … "+it.max)+'</td></tr>';
+    (it["bool"]?"off / on":it.min+" \u2026 "+it.max+(it.step?" step "+it.step:""))+'</td></tr>';
   });
   h+="</tbody></table></div></div>";
  });
- h+='<div class="row pad"><span class="muted">'+changed+
+ h+='<div class="row pad"><span class="muted" id="setCount">'+changed+
   ' setting'+(changed===1?"":"s")+' differ from defaults</span></div>';
  $("setForm").innerHTML=h;
  document.querySelectorAll(".sv").forEach(function(el){
-  el.onchange=function(){
-   var v=el.type==="checkbox"?(el.checked?1:0):el.value;
-   post("/api/settings","category="+el.dataset.c+"&index="+el.dataset.i+"&value="+encodeURIComponent(v))
-    .then(function(r){if(!r.ok)throw 0;return r.json()})
-    .then(function(d){if(el.type!=="checkbox")el.value=d.value;loadSettings()})
-    .catch(function(){toast("The dashboard refused that value")});
-  };
+  el.onchange=function(){sendSetting(el)};
+  /* Enter commits without having to click away first. */
+  el.onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();el.blur()}};
  });
 }).catch(function(){$("setForm").textContent="The settings could not be read."})}
 
