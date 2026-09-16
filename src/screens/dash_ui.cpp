@@ -84,6 +84,30 @@ void DashUi::applySettings() {
     litSegments_ = 0xFF;  // shift points may have moved; force a repaint
 }
 
+void DashUi::setServiceState(bool serving, uint8_t clients) {
+    if (serving == apServing_ && clients == apClients_) {
+        return;
+    }
+    apServing_ = serving;
+    apClients_ = clients;
+
+    if (apText_ == nullptr) {
+        return;
+    }
+    if (!serving) {
+        lv_label_set_text(apText_, "");
+        return;
+    }
+    if (clients > 0) {
+        char text[16];
+        snprintf(text, sizeof(text), "WIFI %u", clients);
+        lv_label_set_text(apText_, text);
+    } else {
+        lv_label_set_text(apText_, "WIFI");
+    }
+    lv_obj_set_style_text_color(apText_, clients > 0 ? theme::good() : theme::cyan(), 0);
+}
+
 void DashUi::settingsChanged() {
     applySettings();
     if (onChange_ != nullptr) {
@@ -132,6 +156,13 @@ void DashUi::buildChrome(lv_obj_t* screen) {
     lv_label_set_text(latchBadge_, "");
     lv_obj_set_style_text_color(latchBadge_, theme::crit(), 0);
     lv_obj_align(latchBadge_, LV_ALIGN_RIGHT_MID, -132, 0);
+
+    // Left of the link state, and empty whenever the radio is off - which is
+    // whenever the car is moving, so it costs the driver no attention.
+    apText_ = lv_label_create(status);
+    lv_label_set_text(apText_, "");
+    lv_obj_set_style_text_color(apText_, theme::cyan(), 0);
+    lv_obj_align(apText_, LV_ALIGN_RIGHT_MID, -196, 0);
 
     linkText_ = lv_label_create(status);
     lv_label_set_text(linkText_, "OFFLINE");

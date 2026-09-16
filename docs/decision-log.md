@@ -4,6 +4,57 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
+## The logs go to the laptop, not to a cloud
+
+The first plan for getting logs off the card without carrying it indoors was an
+upload to Google Drive over the home WiFi. It was worked out in some detail -
+OAuth with a refresh token in flash, TLS with pinned Google roots, resumable
+uploads in 256 kB chunks, NTP so the certificate dates would validate - before
+one fact about the workflow undid all of it.
+
+The logs are read in EMU Classic Client, which runs on the Windows tuning
+laptop. That laptop comes to the car anyway. So the cloud route was car → Drive
+→ download back onto that same laptop: strictly longer than car → laptop, and
+paid for with OAuth, certificate maintenance and a long-lived secret in a
+firmware image anyone can dump.
+
+The laptop's wireless is dedicated to this, so the network is ours to choose.
+The dashboard raises its own access point and serves a page. What went away:
+OAuth, TLS, root certificates, token expiry, the cloud quota, compile-time WiFi
+credentials, and NTP - the browser's own clock sets the RTC, which needs no
+internet at all. What was gained: it works in a garage, at a track, anywhere.
+
+## The access point only runs with the engine stopped
+
+Not a safety rule, though it reads like one. It is what keeps the feature small.
+
+With the engine off the ECU sends nothing, so nothing is written to the card
+while the server reads from it. No second task, no mutex, no SD card shared
+between two cores - the server runs in the same cooperative loop as everything
+else. The one failure this feature could plausibly have caused, a corrupted log,
+is designed out rather than guarded against.
+
+The cost is real and worth naming: a live view of all 195 channels would be the
+most useful thing on that page when chasing a decoder bug, and it is impossible
+here, because with the engine stopped there is nothing to show.
+
+Guards exist because the alternator is not charging while this runs: a settle
+delay, a voltage floor, and a fifteen-minute idle timeout that latches until the
+engine runs again. See [service-page.md](service-page.md).
+
+## Deleting logs from the page, after deciding not to
+
+An earlier draft left deletion out, reasoning that a 32 GB card holds years of
+logs at 4.7 MB per hour of driving, so nothing would ever need removing.
+
+That argued about space when the question was about handling. Clearing the card
+without deletion means taking it out and carrying it to a reader, which is the
+exact chore the page exists to remove. It is in, with a confirmation that names
+the files, no "delete all" form on the server, and a refusal to touch the file
+currently being written.
+
+---
+
 ## The battery and fuel-pressure alarms start switched off
 
 Every alarm shipped enabled. Two of them should not.

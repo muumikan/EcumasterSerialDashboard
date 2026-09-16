@@ -5,11 +5,16 @@ and the protocol layer never learns about timing or pixels.** Each layer below
 only knows the one under it.
 
 ```
+   ServicePage ◀── ServiceAp     WiFi access point, engine stopped only
+        │                        logs, settings, clock, diagnostics
+        │
+        ▼
         LVGL screens              DashUi, MainScreen, TuneScreen, TempsScreen,
               │                   DiagnosticScreen, SetupScreen, Tile
               │
               │   DashSettings ◀──▶ SettingsStore (NVS)
               │        │            numbers and flags only
+              │        │            SetupItem table shared by both editors
               ▼        ▼
         AlarmEngine ──────────┐   one rule table, limits from settings
               │               │   arming delay, hysteresis, latching

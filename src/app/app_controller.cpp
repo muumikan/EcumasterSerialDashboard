@@ -242,6 +242,7 @@ void AppController::loop() {
     servicePage_.loop(serviceAp_.serving());
 
     if (displayReady_) {
+        ui_.setServiceState(serviceAp_.serving(), serviceAp_.clients());
         ui_.update(model_, nowMs, clockTicked);
         display::loop();
     }

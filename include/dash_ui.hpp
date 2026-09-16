@@ -62,6 +62,10 @@ public:
     // Applies the current settings to the UI and tells the owner.
     void settingsChanged();
 
+    // State of the service access point, for the status bar. Pushed in rather
+    // than read out: the UI does not otherwise know the radio exists.
+    void setServiceState(bool serving, uint8_t clients);
+
     // The alarm log, for the service page. Lives here because the alarms are
     // evaluated as the UI updates.
     const AlarmEngine& alarms() const { return alarms_; }
@@ -106,6 +110,7 @@ private:
     lv_obj_t* latchBadge_ = nullptr;
     lv_obj_t* linkText_ = nullptr;
     lv_obj_t* clockText_ = nullptr;
+    lv_obj_t* apText_ = nullptr;
     lv_obj_t* pageArea_ = nullptr;
 
     lv_obj_t* summary_ = nullptr;
@@ -120,6 +125,8 @@ private:
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
     uint32_t lastEventTotal_ = UINT32_MAX;
     char clockShown_[6] = {0};
+    bool apServing_ = false;
+    uint8_t apClients_ = 0xFF;
     bool engineWasRunning_ = false;
 };
 
