@@ -2,6 +2,7 @@
 
 #include <lvgl.h>
 
+#include "alarm_engine.hpp"
 #include "board_config.hpp"
 #include "date_time.hpp"
 #include "display.hpp"
@@ -9,6 +10,13 @@
 #include "rtc_clock.hpp"
 
 namespace ecu {
+namespace {
+
+void settingsChangedCb(void* context) {
+    static_cast<AppController*>(context)->settingsChanged();
+}
+
+}  // namespace
 
 AppController::AppController()
     : ecuUart_(1),  // UART1
@@ -21,6 +29,10 @@ void AppController::begin() {
 
     provider_.begin();
 
+    if (!store_.load(settings_)) {
+        Serial.println(F("settings: no stored record, using defaults"));
+    }
+
     // Before the display: the log is named after the date, and a dashboard
     // whose screen failed should still record the drive.
     rtc_.begin();
@@ -28,7 +40,7 @@ void AppController::begin() {
 
     displayReady_ = display::begin();
     if (displayReady_) {
-        ui_.begin(lv_scr_act(), rtc_);
+        ui_.begin(lv_scr_act(), rtc_, settings_, settingsChangedCb, this);
     } else {
         Serial.println(F("display: LVGL buffer allocation failed, running headless"));
     }
@@ -106,6 +118,13 @@ void AppController::openLogWhenNamed() {
     if (logOpened_) {
         return;
     }
+    if (!settings_.logging) {
+        // Said once, not every pass: the reason has to survive to the console
+        // and to the service page, but it is not news on the second loop.
+        logOpened_ = true;
+        provider_.log().disable("turned off in setup");
+        return;
+    }
     if (rtc_.now().valid) {
         logOpened_ = true;
         provider_.log().begin(rtc_.now());
@@ -120,6 +139,52 @@ void AppController::openLogWhenNamed() {
         Serial.println(F("emulog: no RTC, naming the log after the build"));
         provider_.log().begin(buildTime());
     }
+}
+
+// The engine stopping is the natural end of a drive, and the point at which
+// the file for it should be complete rather than still open. Rotating here
+// means the log can be fetched over the service access point without waiting
+// for the next power cycle.
+void AppController::rotateLogWhenEngineStops(uint32_t nowMs) {
+    const bool running = model_.snapshot().rpm >= kEngineRunningRpm &&
+                         model_.linkState(nowMs) != LinkState::Offline;
+    if (running == engineWasRunning_) {
+        return;
+    }
+    engineWasRunning_ = running;
+
+    // Only on the falling edge, and only when the file has something in it.
+    // Otherwise every key-on that never fires the engine leaves an empty file.
+    if (running || !provider_.log().ready() || provider_.log().framesWritten() == 0) {
+        return;
+    }
+    provider_.log().rotate(rtc_.now());
+}
+
+void AppController::settingsChanged() {
+    settingsDirty_ = true;
+    saveDueMs_ = millis() + kSettingsSaveDelayMs;
+
+    // Logging can be turned off and on again without a reboot. Turning it off
+    // closes the file properly rather than abandoning it, which matters: the
+    // last few seconds live in a RAM buffer until something flushes them.
+    if (settings_.logging && !provider_.log().ready()) {
+        provider_.log().enable();
+        logOpened_ = false;
+    } else if (!settings_.logging && provider_.log().ready()) {
+        provider_.log().end();
+        provider_.log().disable("turned off in setup");
+    }
+}
+
+// Edits are written once the driver stops adjusting, not per button press.
+void AppController::saveSettingsWhenSettled(uint32_t nowMs) {
+    if (!settingsDirty_ || static_cast<int32_t>(nowMs - saveDueMs_) < 0) {
+        return;
+    }
+    settingsDirty_ = false;
+    store_.save(settings_);
+    Serial.println(F("settings: saved"));
 }
 
 void AppController::loop() {
@@ -143,6 +208,8 @@ void AppController::loop() {
     openLogWhenNamed();
 
     provider_.loop(nowMs);
+    rotateLogWhenEngineStops(nowMs);
+    saveSettingsWhenSettled(nowMs);
 
     if (displayReady_) {
         ui_.update(model_, nowMs, clockTicked);

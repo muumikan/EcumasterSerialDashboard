@@ -11,7 +11,6 @@
 #include "dash_settings.hpp"
 #include "main_screen.hpp"
 #include "rtc_clock.hpp"
-#include "settings_store.hpp"
 #include "setup_screen.hpp"
 #include "temps_screen.hpp"
 #include "tune_screen.hpp"
@@ -33,9 +32,17 @@ constexpr uint32_t kBootSweepMs = 2600;
 // the status bar, which is on screen whichever page is up.
 class DashUi {
 public:
-    // The clock is borrowed, not owned: the log needs it for filenames and has
-    // to keep working when the display does not.
-    void begin(lv_obj_t* screen, const RtcClock& rtc);
+    using ChangeCallback = void (*)(void* context);
+
+    // The clock and the settings are borrowed, not owned: the log needs the
+    // clock for its filenames and the settings for whether to run at all, and
+    // both have to keep working when the display does not. `onChange` fires
+    // after an edit so the owner can apply it outside the UI and save it.
+    void begin(lv_obj_t* screen,
+               const RtcClock& rtc,
+               DashSettings& settings,
+               ChangeCallback onChange,
+               void* context);
 
     // `clockTicked` is true on the pass where the RTC produced a fresh reading.
     // The caller owns the tick, so the status bar and the alarm list's running
@@ -52,8 +59,12 @@ public:
 
     void dismissSummary();
 
-    // Applies the current settings everywhere and schedules a save.
+    // Applies the current settings to the UI and tells the owner.
     void settingsChanged();
+
+    // Re-reads the settings after someone else changed them - the service
+    // page, which edits the same struct from outside the UI.
+    void settingsReloaded() { applySettings(); }
 
 private:
     static constexpr uint8_t kPageCount = 6;
@@ -80,10 +91,9 @@ private:
     RunPeaks peaks_;
     const RtcClock* rtc_ = nullptr;
 
-    DashSettings settings_;
-    SettingsStore store_;
-    bool settingsDirty_ = false;
-    uint32_t saveDueMs_ = 0;
+    DashSettings* settings_ = nullptr;
+    ChangeCallback onChange_ = nullptr;
+    void* context_ = nullptr;
 
     lv_obj_t* shift_[kShiftSegments] = {};
     lv_obj_t* dots_[kPageCount] = {};

@@ -31,11 +31,15 @@ void settingsChangedCb(void* context) {
 
 }  // namespace
 
-void DashUi::begin(lv_obj_t* screen, const RtcClock& rtc) {
+void DashUi::begin(lv_obj_t* screen,
+                   const RtcClock& rtc,
+                   DashSettings& settings,
+                   ChangeCallback onChange,
+                   void* context) {
     rtc_ = &rtc;
-    if (!store_.load(settings_)) {
-        Serial.println(F("settings: no stored record, using defaults"));
-    }
+    settings_ = &settings;
+    onChange_ = onChange;
+    context_ = context;
 
     lv_obj_set_style_bg_color(screen, theme::bg(), 0);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
@@ -45,7 +49,7 @@ void DashUi::begin(lv_obj_t* screen, const RtcClock& rtc) {
 
     buildChrome(screen);
 
-    setup_.bind(&settings_, settingsChangedCb, this);
+    setup_.bind(settings_, settingsChangedCb, this);
 
     // The alarm list sits between the gauges and the diagnostics: close enough
     // to reach from DRIVE in three swipes, far enough not to be landed on by
@@ -68,22 +72,23 @@ void DashUi::begin(lv_obj_t* screen, const RtcClock& rtc) {
 
     // The driving page is what the car powers up into.
     showPage(0);
-    if (settings_.bootSweep) {
+    if (settings_->bootSweep) {
         bootSweepEndMs_ = lv_tick_get() + kBootSweepMs;
     }
 }
 
 void DashUi::applySettings() {
-    alarms_.settings() = settings_.alarms;
-    display::setBrightness(settings_.nightMode ? settings_.nightBrightnessPct
-                                               : settings_.brightnessPct);
+    alarms_.settings() = settings_->alarms;
+    display::setBrightness(settings_->nightMode ? settings_->nightBrightnessPct
+                                               : settings_->brightnessPct);
     litSegments_ = 0xFF;  // shift points may have moved; force a repaint
 }
 
 void DashUi::settingsChanged() {
     applySettings();
-    settingsDirty_ = true;
-    saveDueMs_ = lv_tick_get() + kSettingsSaveDelayMs;
+    if (onChange_ != nullptr) {
+        onChange_(context_);
+    }
 }
 
 void DashUi::buildChrome(lv_obj_t* screen) {
@@ -269,10 +274,10 @@ void DashUi::setShiftSegments(uint8_t lit) {
     // Where the strip turns red follows the configured red zone rather than a
     // fixed number of segments, so moving the red line moves the colours too.
     const uint16_t span =
-        settings_.shiftAllRpm > settings_.shiftFirstRpm
-            ? static_cast<uint16_t>(settings_.shiftAllRpm - settings_.shiftFirstRpm)
+        settings_->shiftAllRpm > settings_->shiftFirstRpm
+            ? static_cast<uint16_t>(settings_->shiftAllRpm - settings_->shiftFirstRpm)
             : 1;
-    int redFrom = ((settings_.shiftRedRpm - settings_.shiftFirstRpm) * kShiftSegments) / span;
+    int redFrom = ((settings_->shiftRedRpm - settings_->shiftFirstRpm) * kShiftSegments) / span;
     if (redFrom < 1) redFrom = 1;
     if (redFrom > kShiftSegments) redFrom = kShiftSegments;
 
@@ -326,9 +331,9 @@ bool DashUi::runBootSweep(uint32_t nowMs) {
 
 void DashUi::updateShiftLights(uint16_t rpm) {
     int lit = 0;
-    if (rpm > settings_.shiftFirstRpm && settings_.shiftAllRpm > settings_.shiftFirstRpm) {
-        lit = ((rpm - settings_.shiftFirstRpm) * kShiftSegments) /
-              (settings_.shiftAllRpm - settings_.shiftFirstRpm);
+    if (rpm > settings_->shiftFirstRpm && settings_->shiftAllRpm > settings_->shiftFirstRpm) {
+        lit = ((rpm - settings_->shiftFirstRpm) * kShiftSegments) /
+              (settings_->shiftAllRpm - settings_->shiftFirstRpm);
         if (lit > kShiftSegments) lit = kShiftSegments;
     }
     if (static_cast<uint8_t>(lit) == litSegments_) {
@@ -418,13 +423,6 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs, bool clockTick
                 updateShiftLights(model.snapshot().rpm);
             }
         }
-    }
-
-    // Edits are written once the driver stops adjusting, not per button press.
-    if (settingsDirty_ && static_cast<int32_t>(nowMs - saveDueMs_) >= 0) {
-        settingsDirty_ = false;
-        store_.save(settings_);
-        Serial.println(F("settings: saved"));
     }
 
     // Checked every pass, not only when data arrives: the case this exists for

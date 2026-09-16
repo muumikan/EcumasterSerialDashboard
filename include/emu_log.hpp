@@ -50,6 +50,10 @@ public:
     // that never receives a frame.
     void disable(const char* why);
 
+    // Undo a disable, so the setting can be turned back on without a reboot.
+    // Does nothing to a log that is already running.
+    void enable();
+
     // One frame straight off the wire, marker included. From FrameSink.
     void onFrame(const uint8_t* frame, size_t size) override;
 
@@ -58,6 +62,20 @@ public:
 
     // Flush and stop. Frames after this are dropped.
     void end();
+
+    // Close the current file and open the next one. Called when the engine
+    // stops, so the drive that just finished is a complete file on the card
+    // rather than one still held open, and can be fetched straight away.
+    //
+    // Returns false if the new file could not be opened, in which case logging
+    // is off and failure() says why.
+    bool rotate(const DateTime& now);
+
+    // Name stamped into the next file, after the timestamp. Set from the
+    // service page; the panel cannot enter text at all. Anything outside
+    // [A-Za-z0-9_-] is replaced, and an empty name means the plain timestamp.
+    void setSessionName(const char* name);
+    const char* sessionName() const { return session_; }
 
     bool ready() const { return ready_; }
 
@@ -122,7 +140,11 @@ private:
     bool disabled_ = false;
     bool writeFailed_ = false;
     const char* failure_ = "not started";
-    char fileName_[32] = {0};
+
+    // Long enough for "/YYYYMMDD_HHMM_SS" plus "_" plus a 24-character session
+    // name plus ".emulog" plus the collision suffix, with room to spare.
+    char fileName_[64] = {0};
+    char session_[25] = {0};
 };
 
 }  // namespace ecu

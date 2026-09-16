@@ -84,16 +84,20 @@ bool EmuLog::openCard() {
 
 bool EmuLog::startStream(const DateTime& now) {
     // The date lives in the filename and nowhere else in the format. This is
-    // the one thing the writer contributes that the ECU does not.
-    snprintf(fileName_, sizeof(fileName_), "/%04u%02u%02u_%02u%02u_%02u.emulog",
-             now.year, now.month, now.day, now.hour, now.minute, now.second);
+    // the one thing the writer contributes that the ECU does not - the session
+    // name below is the other.
+    const char* tail = session_[0] != '\0' ? "_" : "";
+    snprintf(fileName_, sizeof(fileName_), "/%04u%02u%02u_%02u%02u_%02u%s%s.emulog",
+             now.year, now.month, now.day, now.hour, now.minute, now.second,
+             tail, session_);
 
     // Two power cycles inside the same second collide, and so does a
     // build-time fallback name used twice. FILE_WRITE truncates, so a
     // collision would quietly destroy the earlier drive.
     for (uint8_t suffix = 1; suffix < 100 && SD.exists(fileName_); ++suffix) {
-        snprintf(fileName_, sizeof(fileName_), "/%04u%02u%02u_%02u%02u_%02u_%u.emulog",
-                 now.year, now.month, now.day, now.hour, now.minute, now.second, suffix);
+        snprintf(fileName_, sizeof(fileName_), "/%04u%02u%02u_%02u%02u_%02u%s%s_%u.emulog",
+                 now.year, now.month, now.day, now.hour, now.minute, now.second,
+                 tail, session_, suffix);
     }
 
     logFile = SD.open(fileName_, FILE_WRITE);
@@ -103,7 +107,9 @@ bool EmuLog::startStream(const DateTime& now) {
 
     // About 164 KB with the ROM's TDEFL_LESS_MEMORY build. That does not fit
     // in internal RAM beside LVGL's buffers, and there is 8 MB of PSRAM.
-    deflator_ = heap_caps_malloc(sizeof(tdefl_compressor), MALLOC_CAP_SPIRAM);
+    if (deflator_ == nullptr) {
+        deflator_ = heap_caps_malloc(sizeof(tdefl_compressor), MALLOC_CAP_SPIRAM);
+    }
     if (deflator_ == nullptr) {
         logFile.close();
         return false;
@@ -119,6 +125,14 @@ bool EmuLog::startStream(const DateTime& now) {
 void EmuLog::disable(const char* why) {
     disabled_ = true;
     failure_ = why;
+}
+
+void EmuLog::enable() {
+    if (ready_) {
+        return;
+    }
+    disabled_ = false;
+    failure_ = "not started";
 }
 
 bool EmuLog::begin(const DateTime& now) {
@@ -146,6 +160,46 @@ bool EmuLog::begin(const DateTime& now) {
     lastCardFlushMs_ = millis();
 
     Serial.print(F("emulog: logging to "));
+    Serial.println(fileName_);
+    return true;
+}
+
+void EmuLog::setSessionName(const char* name) {
+    size_t out = 0;
+    for (size_t i = 0; name != nullptr && name[i] != '\0' && out + 1 < sizeof(session_); ++i) {
+        const char c = name[i];
+        const bool safe = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                          (c >= '0' && c <= '9') || c == '_' || c == '-';
+        session_[out++] = safe ? c : '-';
+    }
+    session_[out] = '\0';
+}
+
+// Not begin() again: the card stays mounted across the swap, and the
+// compressor is re-initialised in place rather than reallocated. Only the file
+// changes.
+bool EmuLog::rotate(const DateTime& now) {
+    if (disabled_ || !now.valid) {
+        return false;
+    }
+
+    end();
+
+    if (!startStream(now)) {
+        fail("could not open the next log file");
+        return false;
+    }
+
+    // The counters describe the open file, and this is a different file.
+    frames_ = 0;
+    dropped_ = 0;
+    bytes_ = 0;
+    sinceFlush_ = 0;
+    ready_ = true;
+    writeFailed_ = false;
+    lastCardFlushMs_ = millis();
+
+    Serial.print(F("emulog: rotated to "));
     Serial.println(fileName_);
     return true;
 }
