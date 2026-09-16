@@ -12,3 +12,4 @@
 # Same thing without an extension ("LICENSE 2"). The pattern above needs a dot
 # after the number, so it missed these and two of them reached a branch.
 * [0-9]
+__pycache__/
