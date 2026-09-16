@@ -30,7 +30,6 @@ public:
 
     void loop(const EngineDataModel& model, uint32_t nowMs);
 
-    State state() const { return state_; }
     bool serving() const { return state_ == State::Serving; }
 
     // Stations currently associated. Drives the idle timeout and the status

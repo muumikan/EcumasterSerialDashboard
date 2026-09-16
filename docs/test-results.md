@@ -23,6 +23,15 @@ Fixed in the same session, both found by using it:
   from the web, and the web form rebuilt itself after every edit, throwing away
   focus and scroll position.
 
+**Also fixed in the tidy-up afterwards**
+
+- **The `Bad frames` counter had never worked.** `EngineDataModel::noteBadFrames`
+  was added with its field and its reader in `4c0b53b`, but the call site was
+  never written, so nothing ever put the adapter's splice and reject counts into
+  the model. The DIAG page and the service page both showed `0`, in green,
+  whatever the link was actually doing. Worth knowing when reading the results
+  below: every `Bad frames: 0` recorded before 16 September 2026 means nothing.
+
 **Still to check on the car**
 
 - **A multi-file `.tar`.** The ustar headers are written by hand and the
@@ -36,7 +45,9 @@ Fixed in the same session, both found by using it:
   refreshes, and that the file currently being written cannot be selected.
 - **Starting the engine mid-download.** The case the whole design leans on: the
   access point should drop, logging resume, and `framesDropped()` stay at zero.
-  Read the count from the console afterwards rather than assuming.
+  Read the count from the console afterwards rather than assuming. The DIAG
+  page's `Bad frames` is now worth reading too - it counted nothing until this
+  session.
 - **The idle timeout.** Fifteen minutes with nobody connected should take the
   radio down, and it should stay down until the engine runs again. This is the
   guard standing between the feature and a flat battery overnight, and it is

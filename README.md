@@ -76,49 +76,57 @@ watching the value it guards is guesswork.
 At power-up the dash opens on Drive and sweeps the shift lights, so every
 segment is confirmed working before the car moves.
 
-## Two protocols
+## The serial link
 
-The EMU can stream either of two serial protocols, and the dashboard reads
-both. Which one is built is a compile-time choice, because they differ in baud
-rate and framing and the ECU is configured for one or the other.
+The dashboard reads the EMU's **EDL-1** logger stream: 260-byte frames at
+115200 baud carrying all 195 channels from one instant, rather than the older
+protocol's 34 channels arriving one 5-byte frame at a time. The ECU has to be
+configured to send it.
 
-| | Classic | **EDL-1** |
-|---|---|---|
-| Environment | `crowpanel_advance_35` | `crowpanel_advance_35_edl` |
-| Baud | 19200 | 115200 |
-| Frame | 5 bytes, one channel | 260 bytes, every channel |
-| Channels | 34 | **195** |
-| Samples | channels arrive apart | all from one instant |
+The classic protocol was supported too, chosen by a build flag, until it was
+removed — it could not produce a `.emulog` at all, and was compiled on every
+change without ever being run. See the
+[decision log](docs/decision-log.md). The adapter seam it justified is still
+there, so adding a protocol back costs nothing above that line.
 
-EDL-1 is what the car runs and what a bare `pio run` builds. Everything above
-the adapter — model, alarms, screens, settings — is identical either way.
+The channels are listed in [docs/edl-channels.md](docs/edl-channels.md); most
+are not on screen yet.
 
-The extra channels are listed in [docs/edl-channels.md](docs/edl-channels.md);
-most are not on screen yet.
+## Service page
+
+With the engine stopped, the dashboard raises a WiFi access point and serves a
+maintenance page on it: download or delete the logs, edit the same settings the
+panel holds, set the clock from the browser, and read the diagnostics that
+otherwise need a USB cable behind the dash.
+
+Join `EcuDash` and open `http://192.168.4.1/`. It is off until switched on
+under `Log` on the setup page. Full details, including why the engine has to be
+stopped, are in [docs/service-page.md](docs/service-page.md).
 
 ## Building
 
 The project uses [PlatformIO](https://platformio.org/).
 
 ```bash
-pio run                                          # build the default (EDL-1)
-pio run -t upload                                # build and flash over USB-C
-pio run -e crowpanel_advance_35 -t upload        # the classic protocol instead
-pio device monitor                               # 115200 baud USB CDC console
+pio run                     # build
+pio run -t upload           # build and flash over USB-C
+pio device monitor          # 115200 baud USB CDC console; press any key for the state
 ```
 
-If `pio` is not on your `PATH`, it lives at `~/.platformio/penv/bin/pio`.
+There is one environment, `crowpanel_advance_35`, so no `-e` is needed. If
+`pio` is not on your `PATH`, it lives at `~/.platformio/penv/bin/pio`.
 
-Dependencies (LovyanGFX and LVGL 8.3) are pulled automatically. The EMU
-protocol decoder is vendored in `lib/EMUSerial-master/` — it is
-[GTO2013/EMUSerial](https://github.com/GTO2013/EMUSerial), used unmodified as
-the protocol reference.
+Dependencies (LovyanGFX and LVGL 8.3) are pulled automatically. The EDL-1 field
+extraction is vendored in `lib/EDLSerial/` — it is
+[ThiloZ/EDLSerial](https://github.com/ThiloZ/EDLSerial) (MIT), with the framing
+done in this project instead; see
+[docs/architecture.md](docs/architecture.md) for why.
 
 ## Layout
 
 ```
 include/            headers, one per module
-src/protocol/       EMUSerial adapter — the only place that knows the wire format
+src/protocol/       EdlSerialAdapter — the only place that knows the wire format
 src/data_model/     EngineDataModel — the single source of truth for the UI
 src/ecu/            EcuDataProvider — owns UART1
 src/alarms/         AlarmEngine — thresholds in one rule table, and the event log
@@ -126,6 +134,7 @@ src/screens/        LVGL pages, tiles, chrome and navigation
 src/diagnostics/    diagnostics page and the serial text report
 src/logging/        EmuLog — .emulog files to the SD card
 src/hal/            display, touch and RTC bring-up
+src/web/            service access point, HTTP server and the page it serves
 docs/               architecture, protocol, decisions
 hardware/ wiring/   pin assignment and the ECU-to-dash signal chain
 ```
@@ -140,8 +149,14 @@ shaped that way.
 EDL-1 the link runs clean with no dropped frames, values read correctly and the
 alarm list behaves. See [docs/test-results.md](docs/test-results.md).
 
-Working: both serial protocols, data model, alarm engine, six pages, swipe
-navigation, settings in flash, the real-time clock, and SD logging.
+Working: the EDL-1 link, data model, alarm engine, eight pages, swipe
+navigation, settings in flash, the real-time clock, SD logging, and the service
+access point with its page — access point, page, log download and clock sync
+confirmed on the car on 16 September 2026.
+
+Not yet exercised on the car: the multi-file `.tar` download, deleting logs,
+starting the engine mid-download, and the idle timeout. They are listed with
+what to look for in [docs/test-results.md](docs/test-results.md).
 
 One thing to know about the parts that work. The SD card has mounted intermittently
 on the bench for reasons nobody has established; `EmuLog` retries and says

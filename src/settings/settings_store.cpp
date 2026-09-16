@@ -65,15 +65,6 @@ void SettingsStore::save(const DashSettings& in) {
     prefs.end();
 }
 
-void SettingsStore::clear() {
-    Preferences prefs;
-    if (!prefs.begin(kNamespace, false)) {
-        return;
-    }
-    prefs.remove(kKey);
-    prefs.end();
-}
-
 DashSettings defaultDashSettings() {
     DashSettings s = {};
     s.alarms = defaultAlarmSettings();

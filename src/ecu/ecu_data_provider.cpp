@@ -36,6 +36,10 @@ void EcuDataProvider::loop(uint32_t nowMs) {
     // Flush regardless, so a paused stream still commits what was buffered.
     log_.loop(nowMs);
 
+    // Before the early return, not after: a rejected frame consumes bytes and
+    // produces no snapshot, which is exactly the case worth counting.
+    model_.noteBadFrames(adapter_.badFrames());
+
     if (consumed == 0) {
         return;  // nothing arrived; leave the model's timestamps alone
     }

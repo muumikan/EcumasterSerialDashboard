@@ -15,9 +15,6 @@ public:
     bool load(DashSettings& out);
 
     void save(const DashSettings& in);
-
-    // Wipes the stored record so the next boot comes up on defaults.
-    void clear();
 };
 
 }  // namespace ecu
