@@ -4,6 +4,68 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
+## Target and actual share one absolute scale
+
+TUNE draws mixture as a deviation bar: AFR minus target, centred, ±1.8 across
+the width. IDLE and BOOST were specified to work "like the AFR bar", and they
+do not. Both draw the actual value as a fill on an absolute scale with the
+target as a mark on that same scale.
+
+A deviation bar answers "how far off are we", which is only a question while
+the loop is closed and aiming at something. Mixture always has a target. Idle
+does not: drive away and idle control opens, the target stops meaning
+anything, and a deviation bar sits pegged for the rest of the session looking
+exactly like a fault. Boost is worse - most of any drive is spent nowhere near
+target, by intent.
+
+An absolute bar degrades into something still true: a rev counter, and a
+pressure gauge. The target mark simply disappears when the ECU is not asking
+for one, which it signals by sending zero.
+
+The scales are 0–2000 rpm and 0–220 kPa. Both are chosen so the interesting
+region sits in the middle of the bar rather than at one end: idle targets run
+850–1500, and 220 kPa puts atmospheric just under halfway, so off boost is a
+position the eye recognises instead of a number it has to read. Driving pegs
+the idle bar, which is the honest behaviour for a scale that stops at 2000.
+
+BOOST shows absolute kPa, while DRIVE shows gauge bar. That is deliberate:
+`boostTarget` is stated in absolute kPa by the ECU, and converting one half of
+a comparison puts arithmetic between the driver and the thing being compared.
+DRIVE is for driving and bar is what a driver thinks in; BOOST is for setting
+up the loop and kPa is what the loop is configured in.
+
+## Absence is a value, and a zero cannot say it
+
+The classic 35-channel protocol carries no idle or boost channel at all, so on
+that build both new pages have nothing to show. Nothing distinguishes that from
+a working loop: a closed idle valve, a settled PID and a missing channel all
+decode to 0.
+
+So `EngineSnapshot` carries a `controlChannels` flag, set by the adapter that
+filled the snapshot, and the pages print `n/a` when it is false. Two
+alternatives were rejected. An `#ifdef` in the page would put protocol
+knowledge back into the UI, which is the one thing this project's layering
+exists to prevent. Leaving the zeroes on screen would have the dashboard state
+something false with no way for the reader to tell.
+
+## The decoder is checked by a script, not by an eye
+
+A manual pass over the vendored EDL decoder cross-checked all 195 channels
+against Ecumaster's format definition and fixed 22 of them. It also missed
+three, and the way it missed them is instructive: `cam1AngleTarget` and
+`cam2AngleTarget` were both caught, and `cam1Angle` and `cam2Angle` sitting
+directly above them were not. The eye read the group as done.
+
+`tools/edl_check_storage.py` now re-derives every channel's storage and
+divider from the XML and compares them against what `parseFrame()` does. It
+reuses the same parser `emulog_inspect.py` already had, so there is one
+definition of what a byte means, and it exits non-zero so it can gate a build.
+
+The third miss, `idleAngleCorr`, is the reason this matters rather than a tidy
+story: idle ignition correction is negative whenever the ECU pulls timing to
+hold the target, so the channel was wrong at precisely the moment the new IDLE
+page exists to show it.
+
 ## The logs go to the laptop, not to a cloud
 
 The first plan for getting logs off the card without carrying it indoors was an
@@ -517,7 +579,9 @@ implementation is the specification available.
   `LV_MEM_SIZE` is 96 kB, and the Setup page's Limits category - the screen
   that builds the most objects - was exercised on the car and behaves. The
   number has never been read; if a future page ever comes up blank or the dash
-  restarts on the way to one, this is the first thing to raise.
+  restarts on the way to one, this is the first thing to raise. IDLE and BOOST
+  have since added two more pages' worth of objects, all built at boot like
+  the rest, which moves this further up the list.
 - **Enclosure dimensions are not verified.** `enclosure/case.scad` is
   parametric and its geometry is right, but the measurements at the top of the
   file are placeholders. They must be taken from Elecrow's STEP model or the

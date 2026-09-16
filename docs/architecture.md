@@ -10,6 +10,7 @@ only knows the one under it.
         │
         ▼
         LVGL screens              DashUi, MainScreen, TuneScreen, TempsScreen,
+              │                   IdleScreen, BoostScreen, AlarmsScreen,
               │                   DiagnosticScreen, SetupScreen, Tile
               │
               │   DashSettings ◀──▶ SettingsStore (NVS)
@@ -87,7 +88,7 @@ model. The seam between hardware and application state.
 Evaluates the snapshot against a fixed rule table: each rule gives a severity,
 a status-bar string, and the page that displays the value. Sitting beside the
 model rather than inside the screens means a threshold is changed in one place
-and all five pages agree.
+and every page agrees.
 
 Three behaviours are deliberate. Alarms arm only after the engine has been
 running for the arming delay, so cranking cannot trip them. Thresholds carry a
@@ -106,6 +107,16 @@ page request, and the 30-second return to the driving page.
 Each page implements `DashPage`. Pages receive the model, the alarm state and
 the run peaks; they hold no thresholds and no protocol knowledge. `Tile` is
 the shared measurement cell and owns its own severity colouring.
+
+Eight pages, ordered by when they are wanted: DRIVE, TUNE and TEMPS are worth
+a glance while moving, IDLE and BOOST are pit work, and ALARMS, DIAG and SETUP
+are read standing still.
+
+IDLE and BOOST show closed-loop control state, which only the EDL-1 stream
+carries. They read `EngineSnapshot::controlChannels` rather than a build flag,
+and show `n/a` when it is false. That keeps the protocol choice where it
+belongs - in the adapter - and it is not cosmetic: 0 % is also what a closed
+idle valve reads, so absence has to be stated rather than implied.
 
 Only the visible page is updated, and only when the model's revision moves.
 

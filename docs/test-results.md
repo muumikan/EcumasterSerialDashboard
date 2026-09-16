@@ -5,6 +5,42 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-16 — IDLE and BOOST pages, not yet on the car
+
+Both environments build and link. Nothing below has been observed on hardware;
+this entry exists so the list is written down before the next trip to the car
+rather than reconstructed at it.
+
+**To check on the car**
+
+- **`idleAngleCorr` goes negative and reads correctly.** The whole reason the
+  decoder fix was made. Unlike `IgnAngle`, this one *is* testable on this car:
+  the idle loop trims timing to hold its target, so the IDLE page's `IDLE IGN`
+  tile should sit somewhere around zero and move in both directions at a
+  steady idle. A reading pinned near +125 means the fix did not take.
+- **The idle target mark lands where the Client says it does.** Compare the
+  bar's mark against Idle Target in EMU Classic Client on the laptop.
+- **`IDLE CTL` follows the loop.** Should read `CLOSED` at idle and `OPEN` off
+  throttle above idle, matching the Client's Idle Control Active.
+- **The boost table set number matches the Client's.** It is shown raw, on the
+  assumption the ECU numbers its sets the same way its own software displays
+  them. That assumption is untested and this is the one item most likely to be
+  wrong.
+- **Both correction terms show a sign and change it.** `IDLE PID` and
+  `BOOST PID` are signed; a reading that never goes below zero is suspect.
+- **Eight page dots still clear the page name.** The dot pitch was tightened
+  from 10 px to 8 px for this. Read on the panel, not in a screenshot.
+- **The pages exist and are reachable** without the object pool running out -
+  see the standing worry in [decision-log.md](decision-log.md).
+
+**Cannot be tested on this car**
+
+- **The classic-protocol `n/a` state.** The car runs the EDL-1 build, so the
+  path where `controlChannels` is false is only exercised by flashing
+  `crowpanel_advance_35`, which nothing else needs.
+
+---
+
 ## 2026-09-10 — .emulog logging opens in EMU Classic Client
 
 Environment `crowpanel_advance_35_edl`, first run of the rewritten `EmuLog`.
