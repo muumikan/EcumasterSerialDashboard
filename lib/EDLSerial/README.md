@@ -61,7 +61,13 @@ void loop() {
 Every field `parseFrame()` decodes was cross-checked against Ecumaster's own
 format definition, [`docs/ecu-formats/version1_211.xml`](../../docs/ecu-formats/version1_211.xml),
 whose `storage` attribute states each channel's width and signedness. That
-found 22 fields the library read wrongly. All are fixed here.
+found 25 fields the library read wrongly. All are fixed here.
+
+The check is now scripted rather than done by eye: the first pass was manual
+and missed three signed fields, which is how `idleAngleCorr` — the one the
+IDLE page needs — survived it. `tools/edl_check_storage.py` re-derives every
+`storage` and `divider` from the XML and reports any field the decoder reads
+with the wrong signedness or scale. Run it after touching `parseFrame()`.
 
 **Signed values read as unsigned.** The library took the raw byte or word
 without a cast, so any negative reading appeared as a large positive one — a
@@ -71,8 +77,15 @@ in 83 % of samples, `dwellError` in 23 %.
 
 | XML `storage` | Fields |
 |---|---|
-| `sbyte` | `IgnAngle` `dwellError` `iatIgnTrim` `cltIgnTrim` `ignFromTable` `nitrousIgnMod` `accIgnCorr` `etcDeltaError` `alsIgnAngle` `etcFrictionCorr` `timerIgnCorr` |
-| `sword` | `wboIPMeas` `wboIPNorm` `pidPTerm` `pidITerm` `pidDTerm` `cam1AngleTarget` `cam2AngleTarget` `etcError` |
+| `sbyte` | `IgnAngle` `idleAngleCorr` `dwellError` `iatIgnTrim` `cltIgnTrim` `ignFromTable` `nitrousIgnMod` `accIgnCorr` `etcDeltaError` `alsIgnAngle` `etcFrictionCorr` `timerIgnCorr` |
+| `sword` | `wboIPMeas` `wboIPNorm` `pidPTerm` `pidITerm` `pidDTerm` `cam1Angle` `cam2Angle` `cam1AngleTarget` `cam2AngleTarget` `etcError` |
+
+`idleAngleCorr`, `cam1Angle` and `cam2Angle` were missed by the first pass and
+fixed later. The cam pair is the trap the manual check fell into: the two
+`…Target` fields next to them were caught, and the eye read the group as done.
+`idleAngleCorr` matters most — idle ignition correction is negative whenever
+the ECU pulls timing to hold the target, which at idle is most of the time, so
+the channel was wrong precisely when it was worth reading.
 
 **`percent7` read as a raw byte.** `wboHeaterDC` and `sparkCutPercent` are
 7-bit percentages: the raw value spans 0…127 across 0…100 %. Reading it raw

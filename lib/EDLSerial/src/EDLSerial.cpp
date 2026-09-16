@@ -64,7 +64,7 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.idleTarget=data[33] | (data[34] << 8);
   frame.idleDC=(uint8_t)data[35];
   frame.idleStep=(uint8_t)data[36];
-  frame.idleAngleCorr=data[37] / 2.0f;
+  frame.idleAngleCorr=(int8_t)data[37] / 2.0f;
   frame.idleControlActive=(uint8_t)data[38];
   frame.curentPIDCorrection=(int8_t)data[39];
   frame.dwellTime=data[40] / 20.0f;
@@ -137,8 +137,8 @@ bool EDLSerial::parseFrame(uint8_t *data, EDLFrame &frame) {
   frame.iatFuelCorr=(uint8_t)data[121];
   frame.parametricOutput3=(uint8_t)data[122];
   frame.parametricOutput4=(uint8_t)data[123];
-  frame.cam1Angle=(data[124] | (data[125] << 8)) / 2.0f;
-  frame.cam2Angle=(data[126] | (data[127] << 8)) / 2.0f;
+  frame.cam1Angle=(int16_t)(data[124] | (data[125] << 8)) / 2.0f;
+  frame.cam2Angle=(int16_t)(data[126] | (data[127] << 8)) / 2.0f;
   frame.cam1ValveDC=(uint8_t)data[128];
   frame.cam2ValveDC=(uint8_t)data[129];
   frame.cam1AngleTarget=(int16_t)(data[130] | (data[131] << 8)) / 2.0f;
