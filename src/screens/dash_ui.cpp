@@ -52,8 +52,9 @@ void DashUi::begin(lv_obj_t* screen,
     setup_.bind(settings_, settingsChangedCb, this);
 
     // The three pages worth looking at while moving come first, then the ones
-    // for standing still. IDLE is pit work, so it sits after TEMPS rather than
-    // next to TUNE, which would have pushed TEMPS two swipes further away.
+    // for standing still. IDLE and BOOST are pit work, so they sit after TEMPS
+    // rather than next to TUNE, which would have pushed TEMPS two swipes
+    // further away.
     //
     // The alarm list stays between the gauges and the diagnostics: reachable
     // from DRIVE without hunting, far enough not to be landed on by accident
@@ -62,9 +63,10 @@ void DashUi::begin(lv_obj_t* screen,
     pages_[1] = &tune_;
     pages_[2] = &temps_;
     pages_[3] = &idle_;
-    pages_[4] = &alarmList_;
-    pages_[5] = &diagnostics_;
-    pages_[6] = &setup_;
+    pages_[4] = &boost_;
+    pages_[5] = &alarmList_;
+    pages_[6] = &diagnostics_;
+    pages_[7] = &setup_;
 
     for (uint8_t i = 0; i < kPageCount; ++i) {
         pages_[i]->create(pageArea_);
