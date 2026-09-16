@@ -51,15 +51,20 @@ void DashUi::begin(lv_obj_t* screen,
 
     setup_.bind(settings_, settingsChangedCb, this);
 
-    // The alarm list sits between the gauges and the diagnostics: close enough
-    // to reach from DRIVE in three swipes, far enough not to be landed on by
-    // accident while driving.
+    // The three pages worth looking at while moving come first, then the ones
+    // for standing still. IDLE is pit work, so it sits after TEMPS rather than
+    // next to TUNE, which would have pushed TEMPS two swipes further away.
+    //
+    // The alarm list stays between the gauges and the diagnostics: reachable
+    // from DRIVE without hunting, far enough not to be landed on by accident
+    // while driving.
     pages_[0] = &drive_;
     pages_[1] = &tune_;
     pages_[2] = &temps_;
-    pages_[3] = &alarmList_;
-    pages_[4] = &diagnostics_;
-    pages_[5] = &setup_;
+    pages_[3] = &idle_;
+    pages_[4] = &alarmList_;
+    pages_[5] = &diagnostics_;
+    pages_[6] = &setup_;
 
     for (uint8_t i = 0; i < kPageCount; ++i) {
         pages_[i]->create(pageArea_);
@@ -135,8 +140,11 @@ void DashUi::buildChrome(lv_obj_t* screen) {
     lv_obj_set_style_border_width(status, 1, 0);
     lv_obj_set_style_border_side(status, LV_BORDER_SIDE_BOTTOM, 0);
 
+    // 8 px pitch rather than 10: at eight pages a 10 px row reached x=85 and
+    // ran under the page name. The dots are still 5 px, so the gap halves
+    // rather than the dot shrinking.
     for (uint8_t i = 0; i < kPageCount; ++i) {
-        lv_obj_t* dot = makePanel(status, 10 + i * 10, (theme::kStatusHeight - 5) / 2, 5, 5);
+        lv_obj_t* dot = makePanel(status, 10 + i * 8, (theme::kStatusHeight - 5) / 2, 5, 5);
         lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_color(dot, theme::dotOff(), 0);
         lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
@@ -145,7 +153,7 @@ void DashUi::buildChrome(lv_obj_t* screen) {
 
     pageName_ = lv_label_create(status);
     lv_label_set_text(pageName_, "DRIVE");
-    lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, 70, 0);
+    lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, 78, 0);
 
     alarmText_ = lv_label_create(status);
     lv_label_set_text(alarmText_, "");

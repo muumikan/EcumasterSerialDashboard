@@ -9,6 +9,7 @@
 #include "diagnostic_screen.hpp"
 #include "engine_data_model.hpp"
 #include "dash_settings.hpp"
+#include "idle_screen.hpp"
 #include "main_screen.hpp"
 #include "rtc_clock.hpp"
 #include "setup_screen.hpp"
@@ -75,7 +76,7 @@ public:
     void settingsReloaded() { applySettings(); }
 
 private:
-    static constexpr uint8_t kPageCount = 6;
+    static constexpr uint8_t kPageCount = 7;
     static constexpr uint8_t kShiftSegments = 14;
 
     void buildChrome(lv_obj_t* screen);
@@ -90,6 +91,7 @@ private:
     MainScreen drive_;
     TuneScreen tune_;
     TempsScreen temps_;
+    IdleScreen idle_;
     AlarmsScreen alarmList_;
     DiagnosticScreen diagnostics_;
     SetupScreen setup_;
