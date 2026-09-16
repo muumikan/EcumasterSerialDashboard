@@ -118,6 +118,9 @@ input[type=text]{text-align:left;width:220px}
 </header>
 
 <div class="wrap">
+ <div class="notice" id="compat" hidden style="border-left-color:var(--crit);background:var(--critbg)">
+  <b>This browser cannot run this page.</b><span id="compatWhy"></span></div>
+
  <div class="notice"><b>The access point stays up only while the engine is stopped.</b>
   <span>Starting the engine drops this network and resumes logging. Finish any download first.</span></div>
 
@@ -200,6 +203,22 @@ input[type=text]{text-align:left;width:220px}
 
 <script>
 var $=function(id){return document.getElementById(id)};
+
+/* A page that dies quietly reads as a page that is empty, which is exactly how
+   the first old browser to fail here was diagnosed - by reading the source
+   rather than by anything the page said. It says it now. */
+function bail(why){
+ var box=document.getElementById("compat");
+ if(!box){return}
+ document.getElementById("compatWhy").textContent=" "+why;
+ box.hidden=false;
+}
+window.onerror=function(msg){bail("It stopped with: "+msg+".");return false};
+/* querySelectorAll returns a NodeList, and NodeList.forEach does not exist in
+   Edge Legacy or IE - calling it threw before the first fetch ever ran, which
+   left the page a shell with no data in it. Arrays keep their own forEach;
+   this is only for the ones that come back from the DOM. */
+function each(list,fn){for(var i=0;i<list.length;i++){fn(list[i],i)}}
 var toastT=null;
 function toast(m){var t=$("toast");t.textContent=m;t.classList.add("on");
  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on")},2400)}
@@ -212,12 +231,13 @@ function post(url,body){return fetch(url,{method:"POST",
 
 /* ---- tabs ---- */
 var tabs=document.querySelectorAll("nav button");
-tabs.forEach(function(b){b.onclick=function(){
- tabs.forEach(function(o){o.setAttribute("aria-selected",o===b?"true":"false")});
- ["logs","settings","diag","alarms"].forEach(function(id){
-  $(id).hidden=(id!==b.dataset.tab)});
- if(b.dataset.tab==="settings")loadSettings();
- if(b.dataset.tab==="alarms")loadEvents();
+each(tabs,function(b){b.onclick=function(){
+ var tab=b.getAttribute("data-tab");
+ each(tabs,function(o){o.setAttribute("aria-selected",o===b?"true":"false")});
+ each(["logs","settings","diag","alarms"],function(id){
+  $(id).hidden=(id!==tab)});
+ if(tab==="settings")loadSettings();
+ if(tab==="alarms")loadEvents();
 }});
 
 /* ---- status ---- */
@@ -288,13 +308,13 @@ function loadLogs(){fetch("/api/logs").then(function(r){return r.json()}).then(f
  $("card").textContent=files.length+" files · "+mb(d.totalBytes)+
   " · card "+((d.cardBytes-d.usedBytes)/1048576).toFixed(1)+" GB free of "+
   (d.cardBytes/1048576).toFixed(1)+" GB";
- document.querySelectorAll(".cb").forEach(function(c){c.onchange=refreshSel});
+ each(document.querySelectorAll(".cb"),function(c){c.onchange=refreshSel});
  refreshSel();
 }).catch(function(){$("logRows").innerHTML=
  '<tr><td colspan="4" class="muted">The card could not be read.</td></tr>'})}
 
-function selected(){var out=[];document.querySelectorAll(".cb").forEach(function(c){
- if(c.checked)out.push(files[+c.dataset.i])});return out}
+function selected(){var out=[];each(document.querySelectorAll(".cb"),function(c){
+ if(c.checked)out.push(files[+c.getAttribute("data-i")])});return out}
 
 function refreshSel(){
  var s=selected(),n=s.length,bytes=0;
@@ -309,7 +329,7 @@ function refreshSel(){
  $("all").indeterminate=n>0&&n<boxes.length;
  $("confirm").hidden=true;
 }
-function setAll(v){document.querySelectorAll(".cb").forEach(function(c){c.checked=v});refreshSel()}
+function setAll(v){each(document.querySelectorAll(".cb"),function(c){c.checked=v});refreshSel()}
 $("all").onchange=function(){setAll($("all").checked)};
 $("selAll").onclick=function(){setAll(true)};
 $("selNone").onclick=function(){setAll(false)};
@@ -366,7 +386,7 @@ function markChanged(it,cell){
 }
 
 function sendSetting(el){
- var ci=+el.dataset.c, ii=+el.dataset.i;
+ var ci=+el.getAttribute("data-c"), ii=+el.getAttribute("data-i");
  var it=setData.categories[ci].items[ii];
  var v=el.type==="checkbox"?(el.checked?1:0):el.value;
  el.disabled=true;
@@ -409,7 +429,7 @@ function loadSettings(){fetch("/api/settings").then(function(r){return r.json()}
  h+='<div class="row pad"><span class="muted" id="setCount">'+changed+
   ' setting'+(changed===1?"":"s")+' differ from defaults</span></div>';
  $("setForm").innerHTML=h;
- document.querySelectorAll(".sv").forEach(function(el){
+ each(document.querySelectorAll(".sv"),function(el){
   el.onchange=function(){sendSetting(el)};
   /* Enter commits without having to click away first. */
   el.onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();el.blur()}};
@@ -449,8 +469,15 @@ $("reboot").onclick=function(){
  toast("Restarting — this page will stop responding");
 };
 
-loadStatus();loadLogs();
-setInterval(loadStatus,5000);
+/* Everything on this page is fetched, so without these there is nothing to
+   show and no point starting. Both arrived in Edge 14 and neither is in IE. */
+if(typeof window.fetch!=="function"||typeof window.Promise!=="function"){
+ bail("It has no fetch or Promise support, which everything on this page is "+
+      "built on. Use a current browser - any Chromium-based one, or Firefox.");
+}else{
+ loadStatus();loadLogs();
+ setInterval(loadStatus,5000);
+}
 </script></body></html>
 )HTML";
 

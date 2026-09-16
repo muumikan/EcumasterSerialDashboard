@@ -93,6 +93,24 @@ speed. Unavailable if the display failed to come up, since the alarm engine live
 with the UI; the page says so rather than showing an empty list that would look
 like a clean run.
 
+## Browsers
+
+The page needs `fetch` and `Promise`, which arrived in Edge 14, and CSS custom
+properties, which arrived in Edge 15. Everything is fetched, so a browser
+without them has nothing to show.
+
+- **Anything current** - Chromium-based, Firefox, Safari - works.
+- **Edge Legacy** (the pre-Chromium Edge on older Windows 10) worked only after
+  the `NodeList.forEach` calls were removed; it does not have that method, and
+  the throw happened before the first fetch, leaving a page with no data in it.
+  The script is plain ES5 now and avoids it.
+- **Internet Explorer** renders the markup and nothing else. It has no CSS
+  custom properties, so all 68 of the page's colours are invalid, and no fetch,
+  so no data arrives. It is not worth supporting and is not supported.
+
+A browser that cannot run the page now says so in red at the top instead of
+sitting there looking empty, and any script error is shown the same way.
+
 ## Notes for whoever changes this
 
 - The page is one PROGMEM string in `src/web/service_page_html.cpp`. This network
