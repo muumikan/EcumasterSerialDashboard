@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "dash_theme.hpp"
+#include "setup_items.hpp"
 #include "ui_tile.hpp"
 
 namespace ecu {
@@ -15,97 +16,6 @@ constexpr lv_coord_t kCategoryHeight = 44;
 constexpr lv_coord_t kRowAreaWidth = theme::kPageWidth - kCategoryWidth;
 constexpr lv_coord_t kRowHeight = 32;
 
-enum class SetupType : uint8_t { Float, U16, U8, Bool };
-
-// One editable value. The offset points into DashSettings, so the table stays
-// declarative and nothing here can reach anything else.
-struct SetupItem {
-    const char* name;
-    const char* unit;
-    SetupType type;
-    uint16_t offset;
-    float step;
-    float minValue;
-    float maxValue;
-    uint8_t decimals;
-};
-
-struct SetupCategory {
-    const char* name;
-    const SetupItem* items;
-    uint8_t count;
-};
-
-#define LIMIT_OFFSET(alarm, field) \
-    static_cast<uint16_t>(offsetof(DashSettings, alarms.limits) + \
-                          static_cast<uint8_t>(AlarmId::alarm) * sizeof(AlarmLimits) + \
-                          offsetof(AlarmLimits, field))
-
-#define FIELD_OFFSET(field) static_cast<uint16_t>(offsetof(DashSettings, field))
-
-// Behaviour of the alarm system itself, plus which alarms are live at all.
-const SetupItem kAlarmItems[] = {
-    { "Arm delay",  "s", SetupType::U8,   FIELD_OFFSET(alarms.armDelayS),        1, 0, 15, 0 },
-    { "Hysteresis", "%", SetupType::U8,   FIELD_OFFSET(alarms.hysteresisPercent), 1, 0, 10, 0 },
-    { "Oil P",      "",  SetupType::Bool, LIMIT_OFFSET(OilPressure, enabled),    0, 0, 1, 0 },
-    { "Coolant",    "",  SetupType::Bool, LIMIT_OFFSET(Coolant, enabled),        0, 0, 1, 0 },
-    { "Lean",       "",  SetupType::Bool, LIMIT_OFFSET(Lean, enabled),           0, 0, 1, 0 },
-    { "Batt low",   "",  SetupType::Bool, LIMIT_OFFSET(BatteryLow, enabled),     0, 0, 1, 0 },
-    { "Charge",     "",  SetupType::Bool, LIMIT_OFFSET(BatteryHigh, enabled),    0, 0, 1, 0 },
-    { "Knock",      "",  SetupType::Bool, LIMIT_OFFSET(Knock, enabled),          0, 0, 1, 0 },
-    { "Inj DC",     "",  SetupType::Bool, LIMIT_OFFSET(InjectorDuty, enabled),   0, 0, 1, 0 },
-    { "Fuel P",     "",  SetupType::Bool, LIMIT_OFFSET(FuelPressure, enabled),   0, 0, 1, 0 },
-    { "IAT",        "",  SetupType::Bool, LIMIT_OFFSET(IntakeAir, enabled),      0, 0, 1, 0 },
-};
-
-const SetupItem kLimitItems[] = {
-    { "Oil P warn",   "bar", SetupType::Float, LIMIT_OFFSET(OilPressure, warn),  0.1f, 0.2f, 6.0f, 1 },
-    { "Oil P crit",   "bar", SetupType::Float, LIMIT_OFFSET(OilPressure, crit),  0.1f, 0.2f, 6.0f, 1 },
-    { "CLT warn",     "C",   SetupType::Float, LIMIT_OFFSET(Coolant, warn),      1.0f, 70,   140,  0 },
-    { "CLT crit",     "C",   SetupType::Float, LIMIT_OFFSET(Coolant, crit),      1.0f, 70,   140,  0 },
-    { "Lean warn",    "",    SetupType::Float, LIMIT_OFFSET(Lean, warn),         0.01f, 0.70f, 1.30f, 2 },
-    { "Lean crit",    "",    SetupType::Float, LIMIT_OFFSET(Lean, crit),         0.01f, 0.70f, 1.30f, 2 },
-    { "Batt warn",    "V",   SetupType::Float, LIMIT_OFFSET(BatteryLow, warn),   0.1f, 9.0f, 14.5f, 1 },
-    { "Batt crit",    "V",   SetupType::Float, LIMIT_OFFSET(BatteryLow, crit),   0.1f, 9.0f, 14.5f, 1 },
-    { "Charge warn",  "V",   SetupType::Float, LIMIT_OFFSET(BatteryHigh, warn),  0.1f, 13.0f, 18.0f, 1 },
-    { "Charge crit",  "V",   SetupType::Float, LIMIT_OFFSET(BatteryHigh, crit),  0.1f, 13.0f, 18.0f, 1 },
-    { "Knock warn",   "V",   SetupType::Float, LIMIT_OFFSET(Knock, warn),        0.1f, 0.2f, 5.0f, 1 },
-    { "Knock crit",   "V",   SetupType::Float, LIMIT_OFFSET(Knock, crit),        0.1f, 0.2f, 5.0f, 1 },
-    { "Inj DC warn",  "%",   SetupType::Float, LIMIT_OFFSET(InjectorDuty, warn), 1.0f, 40,   100,  0 },
-    { "Inj DC crit",  "%",   SetupType::Float, LIMIT_OFFSET(InjectorDuty, crit), 1.0f, 40,   100,  0 },
-    { "Fuel P warn",  "bar", SetupType::Float, LIMIT_OFFSET(FuelPressure, warn), 0.1f, 1.0f, 8.0f, 1 },
-    { "Fuel P crit",  "bar", SetupType::Float, LIMIT_OFFSET(FuelPressure, crit), 0.1f, 1.0f, 8.0f, 1 },
-    { "IAT warn",     "C",   SetupType::Float, LIMIT_OFFSET(IntakeAir, warn),    1.0f, 30,   130,  0 },
-    { "IAT crit",     "C",   SetupType::Float, LIMIT_OFFSET(IntakeAir, crit),    1.0f, 30,   130,  0 },
-};
-
-const SetupItem kShiftItems[] = {
-    { "First light", "rpm", SetupType::U16, FIELD_OFFSET(shiftFirstRpm), 100, 1000, 9000, 0 },
-    { "Red zone",    "rpm", SetupType::U16, FIELD_OFFSET(shiftRedRpm),   100, 1000, 9500, 0 },
-    { "All lit",     "rpm", SetupType::U16, FIELD_OFFSET(shiftAllRpm),   100, 1000, 9500, 0 },
-};
-
-const SetupItem kDisplayItems[] = {
-    { "Brightness",  "%", SetupType::U8,   FIELD_OFFSET(brightnessPct),      5, 10, 100, 0 },
-    { "Night mode",  "",  SetupType::Bool, FIELD_OFFSET(nightMode),          0, 0, 1, 0 },
-    { "Night level", "%", SetupType::U8,   FIELD_OFFSET(nightBrightnessPct), 5, 5,  100, 0 },
-    { "Boot sweep",  "",  SetupType::Bool, FIELD_OFFSET(bootSweep),          0, 0, 1, 0 },
-};
-
-const SetupItem kLogItems[] = {
-    { "Logging", "", SetupType::Bool, FIELD_OFFSET(logging), 0, 0, 1, 0 },
-};
-
-#define COUNT_OF(a) static_cast<uint8_t>(sizeof(a) / sizeof((a)[0]))
-
-const SetupCategory kCategories[] = {
-    { "Alarms",  kAlarmItems,   COUNT_OF(kAlarmItems) },
-    { "Limits",  kLimitItems,   COUNT_OF(kLimitItems) },
-    { "Shift",   kShiftItems,   COUNT_OF(kShiftItems) },
-    { "Display", kDisplayItems, COUNT_OF(kDisplayItems) },
-    { "Log",     kLogItems,     COUNT_OF(kLogItems) },
-};
-constexpr uint8_t kCategoryCount = COUNT_OF(kCategories);
 
 // Button user data packs the item index and the direction into one word, so no
 // per-button allocation is needed.
@@ -172,7 +82,7 @@ void SetupScreen::create(lv_obj_t* parent) {
 }
 
 void SetupScreen::buildCategories() {
-    for (uint8_t i = 0; i < kCategoryCount; ++i) {
+    for (uint8_t i = 0; i < kSetupCategoryCount; ++i) {
         lv_obj_t* item = makePanel(categoryList_, 0, i * kCategoryHeight,
                                    kCategoryWidth, kCategoryHeight);
         lv_obj_set_style_bg_color(item, theme::panel(), 0);
@@ -185,7 +95,7 @@ void SetupScreen::buildCategories() {
         categoryItems_[i] = item;
 
         lv_obj_t* label = lv_label_create(item);
-        lv_label_set_text(label, kCategories[i].name);
+        lv_label_set_text(label, kSetupCategories[i].name);
         lv_obj_align(label, LV_ALIGN_LEFT_MID, 12, 0);
         categoryLabels_[i] = label;
 
@@ -198,7 +108,7 @@ void SetupScreen::buildCategories() {
 }
 
 void SetupScreen::styleCategories() {
-    for (uint8_t i = 0; i < kCategoryCount; ++i) {
+    for (uint8_t i = 0; i < kSetupCategoryCount; ++i) {
         const bool selected = (i == category_);
         lv_obj_set_style_bg_opa(categoryItems_[i], selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
         lv_obj_set_style_text_color(categoryLabels_[i],
@@ -222,7 +132,7 @@ void SetupScreen::buildRows() {
         return;
     }
 
-    const SetupCategory& group = kCategories[category_];
+    const SetupCategory& group = kSetupCategories[category_];
 
     for (uint8_t i = 0; i < group.count; ++i) {
         const SetupItem& item = group.items[i];
@@ -291,43 +201,24 @@ void SetupScreen::buildRows() {
 }
 
 float SetupScreen::readValue(uint16_t itemIndex) const {
-    const SetupItem& item = kCategories[category_].items[itemIndex];
-    const uint8_t* base = reinterpret_cast<const uint8_t*>(settings_) + item.offset;
-
-    switch (item.type) {
-        case SetupType::Float: return *reinterpret_cast<const float*>(base);
-        case SetupType::U16:   return static_cast<float>(*reinterpret_cast<const uint16_t*>(base));
-        case SetupType::U8:    return static_cast<float>(*base);
-        case SetupType::Bool:  return *reinterpret_cast<const bool*>(base) ? 1.0f : 0.0f;
-    }
-    return 0.0f;
+    return readSetting(*settings_, kSetupCategories[category_].items[itemIndex]);
 }
 
 void SetupScreen::writeValue(uint16_t itemIndex, float value) {
-    const SetupItem& item = kCategories[category_].items[itemIndex];
-    uint8_t* base = reinterpret_cast<uint8_t*>(settings_) + item.offset;
-
-    switch (item.type) {
-        case SetupType::Float: *reinterpret_cast<float*>(base) = value; break;
-        case SetupType::U16:   *reinterpret_cast<uint16_t*>(base) = static_cast<uint16_t>(value + 0.5f); break;
-        case SetupType::U8:    *base = static_cast<uint8_t>(value + 0.5f); break;
-        case SetupType::Bool:  *reinterpret_cast<bool*>(base) = value > 0.5f; break;
-    }
+    writeSetting(*settings_, kSetupCategories[category_].items[itemIndex], value);
 }
 
 void SetupScreen::adjust(uint16_t itemIndex, int8_t direction) {
-    if (settings_ == nullptr || itemIndex >= kCategories[category_].count) {
+    if (settings_ == nullptr || itemIndex >= kSetupCategories[category_].count) {
         return;
     }
-    const SetupItem& item = kCategories[category_].items[itemIndex];
+    const SetupItem& item = kSetupCategories[category_].items[itemIndex];
 
     if (item.type == SetupType::Bool) {
         writeValue(itemIndex, readValue(itemIndex) > 0.5f ? 0.0f : 1.0f);
     } else {
-        float next = readValue(itemIndex) + direction * item.step;
-        if (next < item.minValue) next = item.minValue;
-        if (next > item.maxValue) next = item.maxValue;
-        writeValue(itemIndex, next);
+        writeValue(itemIndex,
+                   clampSetting(item, readValue(itemIndex) + direction * item.step));
     }
 
     // In place, never a rebuild: this runs inside the button's own click
@@ -343,7 +234,7 @@ void SetupScreen::refreshRow(uint16_t itemIndex) {
     if (itemIndex >= kMaxRows) {
         return;
     }
-    const SetupItem& item = kCategories[category_].items[itemIndex];
+    const SetupItem& item = kSetupCategories[category_].items[itemIndex];
     const float value = readValue(itemIndex);
 
     if (item.type == SetupType::Bool) {
@@ -368,7 +259,7 @@ void SetupScreen::refreshRow(uint16_t itemIndex) {
 }
 
 void SetupScreen::selectCategory(uint8_t index) {
-    if (index >= kCategoryCount || index == category_) {
+    if (index >= kSetupCategoryCount || index == category_) {
         return;
     }
     category_ = index;

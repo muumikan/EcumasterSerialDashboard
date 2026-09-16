@@ -24,6 +24,10 @@ struct DashSettings {
 
     bool bootSweep;
     bool logging;
+
+    // Raise the service access point when the engine is stopped, so the logs
+    // can be fetched with a laptop instead of the card being carried indoors.
+    bool serviceAp;
 };
 
 DashSettings defaultDashSettings();

@@ -14,12 +14,13 @@ constexpr char kKey[] = "cfg";
 // version is ignored rather than reinterpreted, so a firmware update can never
 // come up with a threshold read out of the wrong bytes.
 //
-// Version 3 does not change the shape: it forces the stored record to be
-// dropped so the new defaults for the battery and fuel-pressure alarms take
-// effect. Everything else on the setup page reverts with it - brightness and
-// the shift points have to be set again once after this update.
+// Version 3 did not change the shape: it forced the stored record to be
+// dropped so the new defaults for the battery and fuel-pressure alarms took
+// effect. Version 4 adds the service access point flag, which does change the
+// shape. Either way the whole setup page reverts to defaults once - brightness
+// and the shift points have to be set again after such an update.
 constexpr uint32_t kMagic = 0x45435544;  // 'ECUD'
-constexpr uint16_t kVersion = 3;
+constexpr uint16_t kVersion = 4;
 
 struct StoredSettings {
     uint32_t magic;
@@ -88,6 +89,10 @@ DashSettings defaultDashSettings() {
 
     s.bootSweep = true;
     s.logging = true;
+
+    // Off until it is asked for. The access point is a radio that comes up on
+    // its own in a parked car, so it is opted into rather than out of.
+    s.serviceAp = false;
     return s;
 }
 
