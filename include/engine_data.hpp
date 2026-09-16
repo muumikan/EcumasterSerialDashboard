@@ -53,6 +53,28 @@ struct EngineSnapshot {
     int8_t   ecuTempC = 0;            // degC (EMU internal)
     uint8_t  tablesSet = 0;           // active table set
     uint16_t celFlags = 0;            // check-engine bit field
+
+    // Idle and boost control. Both are closed loops inside the ECU, and what
+    // these fields carry is the loop's own working state: where it is aiming,
+    // what it is driving the valve to, and how hard it is correcting.
+    //
+    // Only the EDL-1 stream carries them - the classic 35-channel protocol has
+    // no idle or boost channel at all - so `controlChannels` says whether they
+    // mean anything. Nothing here can be inferred from a zero: a closed idle
+    // valve and an absent channel both read 0 %.
+    bool     controlChannels = false;
+
+    uint16_t idleTargetRpm = 0;       // rpm the idle loop is holding to
+    uint8_t  idleDutyPct = 0;         // %, idle valve
+    int8_t   idlePidCorrPct = 0;      // %, the PID's share of that duty
+    float    idleAngleCorrDeg = 0.0f; // deg, timing trim the idle loop asks for
+    bool     idleControlActive = false;  // closed loop, rather than open
+
+    uint16_t boostTargetKpa = 0;      // kPa absolute, same scale as mapKpa
+    uint8_t  boostDutyPct = 0;        // %, boost solenoid
+    int8_t   boostPidCorrPct = 0;     // %, the PID's share of that duty
+    int8_t   boostDcErrCorPct = 0;    // %, the error correction's share
+    uint8_t  boostTableSet = 0;       // which boost table is live (not tablesSet)
 };
 
 // Health of the ECU -> dashboard link, derived from frame arrival timing.

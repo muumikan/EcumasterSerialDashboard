@@ -169,6 +169,20 @@ EngineSnapshot EdlSerialAdapter::read() const {
     s.tablesSet = d.tablesSet;
     s.celFlags = d.cel;
 
+    s.controlChannels = true;
+
+    s.idleTargetRpm = d.idleTarget;
+    s.idleDutyPct = d.idleDC;
+    s.idlePidCorrPct = d.curentPIDCorrection;  // sic, spelling from the library
+    s.idleAngleCorrDeg = d.idleAngleCorr;
+    s.idleControlActive = d.idleControlActive != 0;
+
+    s.boostTargetKpa = d.boostTarget;
+    s.boostDutyPct = d.boostDC;
+    s.boostPidCorrPct = d.boostPIDCorrection;
+    s.boostDcErrCorPct = d.boostDCErrCor;
+    s.boostTableSet = d.boostTableSet;
+
     return s;
 }
 

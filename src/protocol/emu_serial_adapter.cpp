@@ -68,6 +68,9 @@ EngineSnapshot EmuSerialAdapter::read() const {
     s.tablesSet = d.tablesSet;
     s.celFlags = d.cel;
 
+    // controlChannels stays false: this protocol's 35 channels include nothing
+    // from the idle or boost loops, so those pages have nothing to show.
+
     return s;
 }
 
