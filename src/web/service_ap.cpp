@@ -42,6 +42,7 @@ void ServiceAp::start() {
         Serial.println(F("service: could not start the access point"));
         WiFi.mode(WIFI_OFF);
         state_ = State::Off;
+        reason_ = "the radio refused to start";
         return;
     }
 
@@ -49,6 +50,7 @@ void ServiceAp::start() {
     snprintf(ip_, sizeof(ip_), "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
 
     state_ = State::Serving;
+    reason_ = "up";
     clients_ = 0;
     lastClientMs_ = millis();
 
@@ -66,8 +68,20 @@ void ServiceAp::stop(const char* why) {
     }
     WiFi.mode(WIFI_OFF);
     state_ = State::Off;
+    reason_ = why;
     clients_ = 0;
     ip_[0] = '\0';
+}
+
+uint32_t ServiceAp::armingSecondsLeft(uint32_t nowMs) const {
+    if (state_ != State::Arming) {
+        return 0;
+    }
+    const uint32_t elapsed = nowMs - stoppedSinceMs_;
+    if (elapsed >= service::kArmDelayMs) {
+        return 0;
+    }
+    return (service::kArmDelayMs - elapsed + 999) / 1000;
 }
 
 uint32_t ServiceAp::idleSecondsLeft(uint32_t nowMs) const {
@@ -96,6 +110,7 @@ void ServiceAp::loop(const EngineDataModel& model, uint32_t nowMs) {
         if (state_ != State::Off) {
             stop("engine running");
         }
+        reason_ = "engine running";
         return;
     }
 
@@ -103,6 +118,7 @@ void ServiceAp::loop(const EngineDataModel& model, uint32_t nowMs) {
         if (state_ != State::Off) {
             stop("turned off in setup");
         }
+        reason_ = "turned off in setup";
         return;
     }
 
@@ -113,17 +129,20 @@ void ServiceAp::loop(const EngineDataModel& model, uint32_t nowMs) {
         if (state_ != State::Off) {
             stop("battery too low");
         }
+        reason_ = "battery below 12.0 V";
         return;
     }
 
     if (state_ == State::Off) {
         if (idleLatched_) {
+            reason_ = "idle timeout; run the engine to get another window";
             return;
         }
         if (stoppedSinceMs_ == 0) {
             stoppedSinceMs_ = nowMs;
         }
         state_ = State::Arming;
+        reason_ = "waiting out the settle delay";
     }
 
     if (state_ == State::Arming) {

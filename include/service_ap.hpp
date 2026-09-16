@@ -40,6 +40,17 @@ public:
     // is not running.
     uint32_t idleSecondsLeft(uint32_t nowMs) const;
 
+    // Why the access point is not up, or what it is doing. Always current.
+    //
+    // Five separate conditions hold this radio down and none of them is
+    // visible from outside the car: without this, an access point that never
+    // appears is indistinguishable from a firmware that does not have the
+    // feature at all.
+    const char* reason() const { return reason_; }
+
+    // Seconds left of the settle delay while arming, otherwise 0.
+    uint32_t armingSecondsLeft(uint32_t nowMs) const;
+
     const char* ssid() const;
     const char* ipAddress() const { return ip_; }
 
@@ -60,6 +71,8 @@ private:
     // come straight back up on the next pass with the car still parked. One
     // window per drive; running the engine clears it.
     bool idleLatched_ = false;
+
+    const char* reason_ = "not started";
 
     char ip_[16] = {0};
 };

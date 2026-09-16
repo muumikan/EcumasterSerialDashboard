@@ -124,6 +124,28 @@ void AppController::announce() {
         Serial.println(provider_.log().failure());
     }
 
+    // Says the feature is in this build even when the radio is down, and names
+    // the one condition holding it down. Five of them can, and none is visible
+    // from outside the car.
+    Serial.print(F("service   : "));
+    if (serviceAp_.serving()) {
+        Serial.print(serviceAp_.ssid());
+        Serial.print(F(" at http://"));
+        Serial.print(serviceAp_.ipAddress());
+        Serial.print(F("  clients="));
+        Serial.println(serviceAp_.clients());
+    } else {
+        Serial.print(F("down - "));
+        Serial.print(serviceAp_.reason());
+        const uint32_t left = serviceAp_.armingSecondsLeft(millis());
+        if (left > 0) {
+            Serial.print(F(" ("));
+            Serial.print(left);
+            Serial.print(F(" s to go)"));
+        }
+        Serial.println();
+    }
+
     Serial.print(F("display   : "));
     if (displayReady_) {
         Serial.println(F("up"));
