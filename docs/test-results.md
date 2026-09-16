@@ -5,6 +5,60 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-16 — service page, first run on the car
+
+Working on the hardware, observed: the access point comes up once `Service AP`
+is switched on in Setup (it is off by default, and the settings version bump
+means it starts off after this update), the page loads, a log downloads, and
+the clock sets from the browser.
+
+Fixed in the same session, both found by using it:
+
+- **The access point could not explain itself.** Five conditions hold the radio
+  down and none printed anything unless it was taking down an access point that
+  had already come up. An access point that never appears looked exactly like a
+  firmware without the feature. `announce()` now prints a `service` line with
+  the current reason.
+- **The settings page fought back.** The panel never repainted a value changed
+  from the web, and the web form rebuilt itself after every edit, throwing away
+  focus and scroll position.
+
+**Still to check on the car**
+
+- **A multi-file `.tar`.** The ustar headers are written by hand and the
+  `Content-Length` is computed in a separate pass from the one that writes the
+  bytes; if those two disagree by one byte the browser truncates or hangs.
+  Select two or three, download, extract, and open **each** in the Client.
+- **Selecting every file when there are many.** The names go to `/all.tar` in
+  the query string. Thirty files is about a kilobyte of URL, and where the
+  request line stops being accepted has not been established.
+- **Deleting.** Never once run. Check that a throwaway file goes, that the list
+  refreshes, and that the file currently being written cannot be selected.
+- **Starting the engine mid-download.** The case the whole design leans on: the
+  access point should drop, logging resume, and `framesDropped()` stay at zero.
+  Read the count from the console afterwards rather than assuming.
+- **The idle timeout.** Fifteen minutes with nobody connected should take the
+  radio down, and it should stay down until the engine runs again. This is the
+  guard standing between the feature and a flat battery overnight, and it is
+  entirely unverified.
+- **The voltage floor.** Below 12.0 V the access point should refuse to come up
+  and say so on the console.
+- **Rotation on engine stop.** The file for the drive just finished should be
+  complete and open in the Client, and a new one should start.
+- **The session name.** Set one, confirm the next file carries it, and that
+  something like `run 3/4` comes out as `run-3-4`.
+- **Turning logging off and back on** without a reboot. Off should close the
+  file properly - the last few seconds live in a RAM buffer - and on should
+  open a new one.
+- **Settings and clock across a power cycle.** The flash write is debounced four
+  seconds after the last edit; the clock has to be held by the RTC.
+- **The SERVICE AP block on DIAG fits.** Its position was worked out by
+  arithmetic against the column height, not by looking at it. Confirm the key
+  row is not clipped at the bottom, and that the network name turns green and
+  gains a count when a laptop joins.
+
+---
+
 ## 2026-09-16 — IDLE and BOOST pages, not yet on the car
 
 Both environments build and link. Nothing below has been observed on hardware;
