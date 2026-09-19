@@ -29,6 +29,41 @@ void settingsChangedCb(void* context) {
     static_cast<DashUi*>(context)->settingsChanged();
 }
 
+// Status bar geometry, left to right across 480 px. Every slot is a left edge
+// and a width, and the 8 px gaps between them are what keeps two neighbours
+// from ever touching.
+//
+// The widths are measured, not guessed: each is the longest string that slot
+// can hold, rendered in Montserrat 14, rounded up. "ALARMS" is 61 px and the
+// widest page name; "OFFLINE" is 63 and the widest link state, which is why
+// the link slot is 66 and not the 62 that looked about right. The alarm line
+// takes what is left, 114 px, which covers every fixed phrase it shows -
+// "ENGINE OFF" is 90, the longest alarm text seen is "CHARGE 15.2 V" at 104 -
+// and ellipsises anything longer rather than growing.
+constexpr lv_coord_t kPageNameX = 78;
+constexpr lv_coord_t kAlarmX = 146;
+constexpr lv_coord_t kAlarmW = 114;
+constexpr lv_coord_t kLatchX = 268;
+constexpr lv_coord_t kLatchW = 36;
+constexpr lv_coord_t kApX = 312;
+constexpr lv_coord_t kApW = 34;
+constexpr lv_coord_t kLinkX = 354;
+constexpr lv_coord_t kLinkW = 66;
+constexpr lv_coord_t kClockX = 428;
+constexpr lv_coord_t kClockW = 42;
+
+// A label pinned to its slot: fixed width, and long text clipped rather than
+// allowed to grow out of it.
+lv_obj_t* makeSlot(lv_obj_t* parent, lv_coord_t x, lv_coord_t w, lv_text_align_t align) {
+    lv_obj_t* label = lv_label_create(parent);
+    lv_label_set_text(label, "");
+    lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);
+    lv_obj_set_width(label, w);
+    lv_obj_set_style_text_align(label, align, 0);
+    lv_obj_align(label, LV_ALIGN_LEFT_MID, x, 0);
+    return label;
+}
+
 }  // namespace
 
 void DashUi::begin(lv_obj_t* screen,
@@ -114,10 +149,10 @@ void DashUi::setServiceState(const ServiceApStatus& status) {
     }
     if (clients > 0) {
         char text[16];
-        snprintf(text, sizeof(text), "WIFI %u", clients);
+        snprintf(text, sizeof(text), LV_SYMBOL_WIFI " %u", clients);
         lv_label_set_text(apText_, text);
     } else {
-        lv_label_set_text(apText_, "WIFI");
+        lv_label_set_text(apText_, LV_SYMBOL_WIFI);
     }
     lv_obj_set_style_text_color(apText_, clients > 0 ? theme::good() : theme::cyan(), 0);
 }
@@ -162,37 +197,43 @@ void DashUi::buildChrome(lv_obj_t* screen) {
 
     pageName_ = lv_label_create(status);
     lv_label_set_text(pageName_, "DRIVE");
-    lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, 78, 0);
+    lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, kPageNameX, 0);
 
-    alarmText_ = lv_label_create(status);
-    lv_label_set_text(alarmText_, "");
+    // Everything on this bar now sits in a slot of its own, given as a fixed
+    // left edge and a fixed width, and clips to it.
+    //
+    // It used to be placed by eye, with each item at an offset from the right
+    // edge and the alarm line simply centred. Those two arrangements did not
+    // know about each other: park the car with the access point up and
+    // "ENGINE OFF" grew right underneath "WIFI", which is the one situation
+    // where both are shown. Nothing here can reach into a neighbour any more,
+    // whatever it is asked to display.
+    alarmText_ = makeSlot(status, kAlarmX, kAlarmW, LV_TEXT_ALIGN_LEFT);
     lv_obj_set_style_text_color(alarmText_, theme::dim(), 0);
-    lv_obj_align(alarmText_, LV_ALIGN_CENTER, 0, 0);
+    // The one line whose content is not a fixed vocabulary, so the one that
+    // gets an ellipsis rather than a clean cut.
+    lv_label_set_long_mode(alarmText_, LV_LABEL_LONG_DOT);
 
-    latchBadge_ = lv_label_create(status);
-    lv_label_set_text(latchBadge_, "");
+    latchBadge_ = makeSlot(status, kLatchX, kLatchW, LV_TEXT_ALIGN_RIGHT);
     lv_obj_set_style_text_color(latchBadge_, theme::crit(), 0);
-    lv_obj_align(latchBadge_, LV_ALIGN_RIGHT_MID, -132, 0);
 
-    // Left of the link state, and empty whenever the radio is off - which is
-    // whenever the car is moving, so it costs the driver no attention.
-    apText_ = lv_label_create(status);
-    lv_label_set_text(apText_, "");
+    // Empty whenever the radio is off - which is whenever the car is moving,
+    // so it costs the driver no attention. The glyph rather than the word:
+    // it says the same thing in a third of the width, on a bar that has
+    // already run out of room once.
+    apText_ = makeSlot(status, kApX, kApW, LV_TEXT_ALIGN_RIGHT);
     lv_obj_set_style_text_color(apText_, theme::cyan(), 0);
-    lv_obj_align(apText_, LV_ALIGN_RIGHT_MID, -196, 0);
 
-    linkText_ = lv_label_create(status);
+    linkText_ = makeSlot(status, kLinkX, kLinkW, LV_TEXT_ALIGN_RIGHT);
     lv_label_set_text(linkText_, "OFFLINE");
     lv_obj_set_style_text_color(linkText_, theme::crit(), 0);
-    lv_obj_align(linkText_, LV_ALIGN_RIGHT_MID, -66, 0);
 
     // The car's own instrument cluster has no clock, so this is the only one
     // the driver gets. Minutes only: seconds would force a repaint every
     // second for something nobody reads to that precision.
-    clockText_ = lv_label_create(status);
+    clockText_ = makeSlot(status, kClockX, kClockW, LV_TEXT_ALIGN_RIGHT);
     lv_label_set_text(clockText_, "--:--");
     lv_obj_set_style_text_color(clockText_, theme::dim(), 0);
-    lv_obj_align(clockText_, LV_ALIGN_RIGHT_MID, -10, 0);
 
     // ---- page area ------------------------------------------------------
     pageArea_ = makePanel(screen, 0, theme::kChromeHeight, theme::kPageWidth, theme::kPageHeight);
@@ -427,7 +468,6 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
         }
     }
     lv_label_set_text(alarmText_, line);
-    lv_obj_align(alarmText_, LV_ALIGN_CENTER, 0, 0);
 
     // Counts events, not conditions: the badge is there to say "something
     // happened, go and look", and it has to keep saying so after the condition
