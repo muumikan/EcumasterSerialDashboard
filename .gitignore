@@ -13,3 +13,6 @@
 # after the number, so it missed these and two of them reached a branch.
 * [0-9]
 __pycache__/
+
+# Intermediate output of docs/mockup/render.py; the PNGs beside it are kept.
+docs/mockup/build/

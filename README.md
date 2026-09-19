@@ -29,18 +29,44 @@ is the one that decides whether the board survives.
 
 ## What it shows
 
-Six pages, switched by swiping horizontally. Only channels that have a sensor
+Eight pages, switched by swiping horizontally. Only channels that have a sensor
 actually fitted to the car appear anywhere; VSS and EGT are streamed by the
 ECU but not wired, so they are not displayed.
 
-| Page | Contents |
+The pictures below are drawings of each page at the panel's own 480 × 320,
+produced by [docs/mockup/render.py](docs/mockup/render.py) from the same
+numbers the firmware uses. They are not screenshots — nothing here has been
+photographed off the panel yet — so treat them as the layout, not as proof it
+renders this way.
+
+| | |
 |---|---|
-| **Drive** | RPM, boost with peak hold, CLT, oil pressure, lambda, battery |
-| **Tune** | Lambda vs. target, knock, ignition advance, injector PW and duty, MAP, TPS, RPM |
-| **Temps & press** | CLT, IAT, ECU temp, oil pressure, fuel pressure, ΔFPR |
-| **Alarms** | Everything that tripped this run, newest first, with the time |
-| **Diag** | Link state, frame age, counters, what latched, CEL word, run peaks |
-| **Setup** | Alarm limits and behaviour, shift points, brightness, logging |
+| **1 · Drive** — RPM, boost with peak hold, CLT, oil pressure, lambda, battery | **2 · Tune** — AFR against target, knock, ignition, injector PW and duty, MAP, TPS, RPM |
+| ![Drive](docs/mockup/1-drive.png) | ![Tune](docs/mockup/2-tune.png) |
+| **3 · Temps** — CLT, IAT, ECU temp, oil pressure, fuel pressure, ΔFPR | **4 · Idle** — RPM against the idle target, valve duty, the PID's share, timing trim |
+| ![Temps](docs/mockup/3-temps.png) | ![Idle](docs/mockup/4-idle.png) |
+| **5 · Boost** — MAP against the boost target, solenoid duty, PID and error correction | **6 · Alarms** — everything that tripped this run, newest first, with the time |
+| ![Boost](docs/mockup/5-boost.png) | ![Alarms](docs/mockup/6-alarms.png) |
+| **7 · Diag** — link state, frame age, counters, what latched, CEL word, run peaks | **8 · Setup** — alarm limits and behaviour, shift points, brightness, logging |
+| ![Diag](docs/mockup/7-diag.png) | ![Setup](docs/mockup/8-setup.png) |
+
+Idle and Boost are pit work rather than driving pages, which is why they sit
+after Temps rather than next to Tune. Both need the EDL-1 stream's control
+channels; on a car whose ECU does not send them, they say so instead of
+drawing zeros.
+
+A measurement's name is yellow and its value white, everywhere on the
+dashboard. Grey on black was the lowest contrast on the panel and it was on
+the one element that says what you are looking at; yellow on black is also
+what an Ecumaster dash looks like, so the panel matches the software beside
+it.
+
+Parked, with the engine stopped and the service access point up, the same
+Drive page reads like this — the oil pressure cell showing what a critical
+alarm does to a cell, and the status bar carrying the access point, a latched
+count and the link all at once:
+
+![Drive, parked, with the access point up](docs/mockup/drive-parked.png)
 
 Above every page sit two always-on layers: a 6 px shift-light strip, lit from
 1 000 rpm and red from 6 000, and a status bar carrying the link state, the
@@ -136,6 +162,7 @@ src/logging/        EmuLog — .emulog files to the SD card
 src/hal/            display, touch and RTC bring-up
 src/web/            service access point, HTTP server and the page it serves
 docs/               architecture, protocol, decisions, vendor change logs
+docs/mockup/        drawings of the eight pages, and the script that makes them
 hardware/ wiring/   pin assignment and the ECU-to-dash signal chain
 ```
 
