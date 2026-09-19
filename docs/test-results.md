@@ -61,6 +61,16 @@ Added in the same session, both asked for after living with the logs:
 - That the dashboard still has heap to spare with the radio up: the service
   page reports free heap and the LVGL pool side by side under Diagnostics.
 
+Added afterwards, from the same session's look at the panel: the readings on
+the three-across pages went 28 px to 36 px, the unit moved up beside the
+caption so a wide reading cannot run into it, captions went yellow, and the
+status bar was rebuilt as fixed slots. None of it is on the car yet. What to
+look at: whether 36 px is enough at arm's length in daylight, whether any
+reading overflows its cell - the widths were checked against the font's own
+metrics, but only for the values the ECU has actually been seen to send - and
+whether the status bar still reads cleanly with an alarm latched and the
+access point up at the same time, which is the case that overlapped.
+
 ---
 
 ## 2026-09-16 — service page, first run on the car

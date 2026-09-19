@@ -4,6 +4,58 @@ Why the project is shaped the way it is. Newest first.
 
 ---
 
+## A measurement's name is yellow, and its unit is on the caption's line
+
+Two changes that came out of reading the panel in the car rather than on a
+desk, and they are the same change.
+
+The name of a measurement was grey on black, which is the lowest contrast
+anywhere on this dashboard, on the one element that tells you what you are
+looking at. It is yellow now. That is also what an Ecumaster dash looks like,
+so the panel matches the software it sits beside; a driver who knows one reads
+the other without relearning it.
+
+The yellow is `#E8C547` and is deliberately clear of the warning amber
+`#E8A33D`, which has red in it. The two are never far apart on screen and must
+not be confused: one is a name, the other is a verdict.
+
+The unit moved from the bottom right of the cell to the top right, beside the
+name. Bottom right put it on the value's own baseline, which meant every
+increase in the value's size walked the two closer together - and the values
+did need to grow. It also reads better: what this is and what it is measured
+in are the same kind of fact, and the line below is then the value's alone.
+
+Values on the three-across pages went from 28 px to 36 px, which is the
+largest LVGL's built-in Montserrat offers that still fits a 160 x 95 cell
+under its caption. 48 does not: its line box is 52 px against 79 px of cell
+inside the padding, which leaves nothing for the caption. The one cell that
+stayed smaller is IDLE CTL, because it holds a word rather than a number, and
+"CLOSED" is 154 px at 36 - wider than the cell.
+
+---
+
+## The status bar is slots, not offsets
+
+Everything on the status bar now sits in a slot given as a fixed left edge and
+a fixed width, and clips to it. It used to be placed by eye: each item at an
+offset from the right edge, and the alarm line simply centred.
+
+Those two arrangements did not know about each other. Park the car with the
+access point up and "ENGINE OFF" grew leftwards from the centre underneath
+"WIFI", which is the one situation where both are shown - so the bug was
+invisible on the bench and unavoidable in the driveway.
+
+The widths are measured rather than guessed, by reading the advance widths out
+of `lv_font_montserrat_14.c` for the longest string each slot can hold. That
+turned up a second latent bug: "OFFLINE" is 63 px, and the slot that looked
+about right was 62.
+
+The access point indicator became LVGL's wifi glyph instead of the word. It
+says the same thing in a third of the width, on a bar that had already run out
+of room once.
+
+---
+
 ## Target and actual share one absolute scale
 
 TUNE draws mixture as a deviation bar: AFR minus target, centred, ±1.8 across
@@ -575,13 +627,14 @@ implementation is the specification available.
   second. LVGL coalesces the redraw, but the formatting work is done every
   time. Rate-limiting to about 20 Hz would cut it by an order of magnitude and
   make the digits readable rather than a blur.
-- **LVGL object pool headroom is still unmeasured, but no longer suspect.**
-  `LV_MEM_SIZE` is 96 kB, and the Setup page's Limits category - the screen
-  that builds the most objects - was exercised on the car and behaves. The
-  number has never been read; if a future page ever comes up blank or the dash
-  restarts on the way to one, this is the first thing to raise. IDLE and BOOST
-  have since added two more pages' worth of objects, all built at boot like
-  the rest, which moves this further up the list.
+- **LVGL object pool headroom: closed, the hard way, on 2026-09-19.** This
+  entry used to say the pool was "unmeasured, but no longer suspect", and that
+  if a page ever came up blank or the dash restarted on the way to one, this
+  was the first thing to raise. It restarted on the way to the Limits
+  category. `LV_MEM_SIZE` is 128 kB now, SETUP works from a fixed pool of rows
+  so it no longer scales with the settings table, and the number is finally
+  readable - the service page prints it under Diagnostics. See
+  docs/test-results.md.
 - **Enclosure dimensions are not verified.** `enclosure/case.scad` is
   parametric and its geometry is right, but the measurements at the top of the
   file are placeholders. They must be taken from Elecrow's STEP model or the
@@ -589,7 +642,9 @@ implementation is the specification available.
 - **Fonts.** LVGL's built-in Montserrat is not condensed and stops at 48 px,
   so the RPM readout is smaller than the mockup's. `λ` and `Δ` are outside its
   character set, so the UI uses `LAMBDA`, `DFPR` and `C` instead of `°C`. A
-  custom font subset would fix all of this at once.
+  custom font subset would fix all of this at once - and would give the
+  three-across pages more than the 36 px they read at now, since a condensed
+  face at 44 px would fit the same 144 px cell.
 - **Alarm state freezes when the link drops.** Evaluation now runs on a link
   state change as well as on new data - it has to, or a lost link would never
   be recorded as an event - but it re-evaluates the same stale snapshot, so
