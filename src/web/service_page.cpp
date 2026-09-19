@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <SD.h>
 #include <WebServer.h>
+#include <lvgl.h>
 #include <string.h>
 
 #include "ecu_link.hpp"
@@ -207,6 +208,14 @@ void ServicePage::handleStatus() {
     out += ",\"uptime\":" + String(nowMs / 1000);
     out += ",\"heap\":" + String(ESP.getFreeHeap());
     out += ",\"psram\":" + String(ESP.getFreePsram());
+
+    // LVGL's own pool, which is a fixed array and not part of the heap above.
+    // It is the one that has actually run out on this board.
+    lv_mem_monitor_t lv = {};
+    lv_mem_monitor(&lv);
+    out += ",\"lvFree\":" + String(static_cast<uint32_t>(lv.free_size));
+    out += ",\"lvTotal\":" + String(static_cast<uint32_t>(lv.total_size));
+    out += ",\"lvUsedPct\":" + String(lv.used_pct);
     out += '}';
 
     server_->send(200, "application/json", out);

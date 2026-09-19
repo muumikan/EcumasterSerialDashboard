@@ -285,6 +285,12 @@ function drawDiag(s){
   kv("Bad frames",s.badFrames,"since boot",s.badFrames>0?"warnv":"okv")+
   kv("Free heap",(s.heap/1024).toFixed(0)+" kB","")+
   kv("Free PSRAM",(s.psram/1048576).toFixed(1)+" MB","")+
+  /* The pool the screens are built from, and the one that runs out first.
+     Exhausting it used to reboot the dashboard without a word - see
+     lv_conf.h - so it is worth a line here. */
+  kv("Screen memory",(s.lvFree/1024).toFixed(0)+" kB free of "+
+     (s.lvTotal/1024).toFixed(0)+" kB",s.lvUsedPct+"% used",
+     s.lvUsedPct>85?"critv":(s.lvUsedPct>70?"warnv":"okv"))+
   kv("Uptime",ups,"since power-on")+
   kv("Clients",s.clients,"joined to the access point")+
   kv("Firmware",s.build,"");
