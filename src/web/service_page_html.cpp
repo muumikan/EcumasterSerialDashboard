@@ -54,6 +54,9 @@ th{text-align:left;font:600 10px var(--mono);text-transform:uppercase;letter-spa
  color:var(--faint);padding:0 12px 7px 0;border-bottom:1px solid var(--rule);white-space:nowrap}
 td{padding:8px 12px 8px 0;border-bottom:1px solid var(--rule2);vertical-align:baseline}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.day td{background:var(--sunk);border-bottom:1px solid var(--rule);padding-top:10px}
+tr.day .d{font:650 12px var(--mono);letter-spacing:.06em}
+tr.day .c{color:var(--soft);font-size:12px;margin-left:10px}
 .name{font-family:var(--mono)}
 .muted{color:var(--soft)}
 .btn{font:550 13px var(--ui);padding:7px 14px;border-radius:3px;cursor:pointer;
@@ -314,15 +317,37 @@ function drawDiag(s){
 
 /* ---- logs ---- */
 var files=[],active="";
+/* "20260919/1732_04.emulog" -> the folder half, or "" for a log left in the
+   root from before the dashboard filed them by day. */
+function dayOf(name){var i=name.indexOf("/");return i<0?"":name.slice(0,i)}
+function leafOf(name){var i=name.indexOf("/");return i<0?name:name.slice(i+1)}
+function dayLabel(day){
+ if(day==="")return "Card root";
+ return day.slice(6,8)+"."+day.slice(4,6)+"."+day.slice(0,4);
+}
+
 function loadLogs(){fetch("/api/logs").then(function(r){return r.json()}).then(function(d){
  files=d.files;active=d.active;
+ /* Names start with the date, so one descending sort puts the newest day
+    first and the newest run of that day at the top of it. */
  files.sort(function(a,b){return a.name<b.name?1:-1});
  var h="";
  if(files.length===0)h='<tr><td colspan="4" class="muted">No logs on the card yet.</td></tr>';
+ var day=null;
  files.forEach(function(f,i){
+  var d0=dayOf(f.name);
+  if(d0!==day){
+   day=d0;
+   var n=0,bytes=0;
+   files.forEach(function(g){if(dayOf(g.name)===d0){n++;bytes+=g.size}});
+   h+='<tr class="day"><td><input type="checkbox" class="dayb" data-d="'+esc(d0)+
+    '" aria-label="Select this day"></td><td colspan="3"><span class="d">'+
+    esc(dayLabel(d0))+'</span><span class="c">'+n+" file"+(n===1?"":"s")+
+    " · "+mb(bytes)+'</span></td></tr>';
+  }
   var isActive=(f.name===active);
   h+='<tr><td>'+(isActive?'':'<input type="checkbox" class="cb" data-i="'+i+'">')+'</td>'+
-   '<td class="name">'+esc(f.name)+(isActive?' <span class="muted">(recording)</span>':'')+'</td>'+
+   '<td class="name">'+esc(leafOf(f.name))+(isActive?' <span class="muted">(recording)</span>':'')+'</td>'+
    '<td class="num">'+mb(f.size)+'</td>'+
    '<td>'+(isActive?'':'<a class="btn small" href="/log?name='+encodeURIComponent(f.name)+'">Download</a>')+'</td></tr>';
  });
@@ -331,6 +356,12 @@ function loadLogs(){fetch("/api/logs").then(function(r){return r.json()}).then(f
   " · card "+((d.cardBytes-d.usedBytes)/1048576).toFixed(1)+" GB free of "+
   (d.cardBytes/1048576).toFixed(1)+" GB";
  each(document.querySelectorAll(".cb"),function(c){c.onchange=refreshSel});
+ each(document.querySelectorAll(".dayb"),function(c){c.onchange=function(){
+  var want=c.getAttribute("data-d");
+  each(document.querySelectorAll(".cb"),function(b){
+   if(dayOf(files[+b.getAttribute("data-i")].name)===want)b.checked=c.checked});
+  refreshSel();
+ }});
  refreshSel();
 }).catch(function(){$("logRows").innerHTML=
  '<tr><td colspan="4" class="muted">The card could not be read.</td></tr>'})}
@@ -349,6 +380,15 @@ function refreshSel(){
  var boxes=document.querySelectorAll(".cb");
  $("all").checked=n>0&&n===boxes.length;
  $("all").indeterminate=n>0&&n<boxes.length;
+ /* A day's box says what its own files say, whether they were ticked there
+    or one at a time below it. */
+ each(document.querySelectorAll(".dayb"),function(c){
+  var want=c.getAttribute("data-d"),seen=0,on=0;
+  each(boxes,function(b){
+   if(dayOf(files[+b.getAttribute("data-i")].name)===want){seen++;if(b.checked)on++}});
+  c.checked=seen>0&&on===seen;
+  c.indeterminate=on>0&&on<seen;
+ });
  $("confirm").hidden=true;
 }
 function setAll(v){each(document.querySelectorAll(".cb"),function(c){c.checked=v});refreshSel()}

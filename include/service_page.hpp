@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Arduino.h>
 #include <stdint.h>
 
 #include "alarm_engine.hpp"
@@ -80,6 +81,24 @@ private:
     // Sends one file from the card, in blocks, pumping the UI between them.
     // Returns false if the file could not be opened.
     bool sendFile(const char* name);
+
+    // Removes day folders left empty by a delete.
+    void pruneEmptyDays();
+
+    // How many empty folders one delete can clear. A delete can only empty as
+    // many days as it touched, and a request naming more than eight days'
+    // worth of files is not one the page can produce.
+    static constexpr uint8_t kMaxPrune = 8;
+
+    // One entry of the log listing, flushed to the client once enough of them
+    // have accumulated. See handleLogs.
+    void appendLog(String& out, const char* name, uint32_t size,
+                   bool& first, uint32_t& total);
+
+    // Send the listing once it has grown past this. Small enough that a card
+    // full of logs never costs more than this much heap, large enough that the
+    // chunk overhead stays irrelevant.
+    static constexpr size_t kChunkFlush = 1024;
 
     ServiceContext ctx_;
     WebServer* server_ = nullptr;

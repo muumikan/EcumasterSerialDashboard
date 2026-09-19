@@ -28,23 +28,57 @@ bool isLogName(const char* name) {
     return len > suffix && strcmp(name + len - suffix, kEmuLogSuffix) == 0;
 }
 
-// Names come back from the card as "/20260910_1732_04.emulog"; the page and
-// the URLs use them without the leading slash.
-const char* bareName(const char* path) {
-    const char* slash = strrchr(path, '/');
-    return slash != nullptr ? slash + 1 : path;
+// Paths come back from the card as "/20260910/1732_04.emulog"; the page and
+// the URLs use them relative to the root, so the day folder stays part of the
+// name and one string identifies a log everywhere.
+const char* cardName(const char* path) {
+    return path != nullptr && path[0] == '/' ? path + 1 : path;
 }
 
-// Rejects anything that could walk out of the card's root. The only names this
-// server will open are plain log filenames.
+bool isDayFolder(const char* name) {
+    if (strlen(name) != 8) {
+        return false;
+    }
+    for (uint8_t i = 0; i < 8; ++i) {
+        if (name[i] < '0' || name[i] > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Rejects anything that could walk out of the card's root. Two shapes are
+// accepted and nothing else: a log in the root, left over from before logs
+// were filed by day, and a log inside a day folder. In particular the folder
+// half has to be eight digits, so no request can name a directory this
+// dashboard did not create.
 bool safeName(const String& name) {
-    if (name.length() == 0 || name.length() > 60) {
+    if (name.length() == 0 || name.length() > 70) {
         return false;
     }
-    if (name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 || name.indexOf("..") >= 0) {
+    if (name.indexOf('\\') >= 0 || name.indexOf("..") >= 0) {
         return false;
     }
-    return isLogName(name.c_str());
+
+    const int slash = name.indexOf('/');
+    if (slash >= 0) {
+        if (slash != 8 || name.indexOf('/', slash + 1) >= 0) {
+            return false;   // one folder deep, and the folder is a date
+        }
+        char day[9];
+        for (uint8_t i = 0; i < 8; ++i) {
+            day[i] = name.charAt(i);
+        }
+        day[8] = '\0';
+        if (!isDayFolder(day)) {
+            return false;
+        }
+    }
+
+    // slash is -1 for a root-level log, which puts this back at the start of
+    // the string - the shape that has to keep working for what is already on
+    // the card.
+    return isLogName(name.c_str() + slash + 1);
 }
 
 void appendJsonString(String& out, const char* value) {
@@ -192,7 +226,7 @@ void ServicePage::handleStatus() {
     out += ",\"logging\":";
     out += log.ready() ? "true" : "false";
     out += ",\"logFile\":";
-    appendJsonString(out, log.ready() ? bareName(log.fileName()) : "");
+    appendJsonString(out, log.ready() ? cardName(log.fileName()) : "");
     out += ",\"logFailure\":";
     appendJsonString(out, log.failure() != nullptr ? log.failure() : "");
     out += ",\"frames\":" + String(log.framesWritten());
@@ -228,37 +262,69 @@ void ServicePage::handleStatus() {
     server_->send(200, "application/json", out);
 }
 
+// Appends one file's entry and keeps the reply moving out in pieces. A season
+// of logs is several hundred entries, and building all of it in one String
+// would be tens of kilobytes of heap held while the radio is up.
+void ServicePage::appendLog(String& out, const char* name, uint32_t size,
+                            bool& first, uint32_t& total) {
+    if (!first) {
+        out += ',';
+    }
+    first = false;
+    out += "{\"name\":";
+    appendJsonString(out, name);
+    out += ",\"size\":" + String(size);
+    out += '}';
+    total += size;
+
+    if (out.length() >= kChunkFlush) {
+        server_->sendContent(out);
+        out = "";
+    }
+}
+
 void ServicePage::handleLogs() {
+    server_->setContentLength(CONTENT_LENGTH_UNKNOWN);
+    server_->send(200, "application/json", "");
+
     String out;
-    out.reserve(1024);
+    out.reserve(kChunkFlush + 256);
     out += '{';
 
     // The file being written is named so the page can grey it out. It is never
     // offered for download or deletion: it is still open and incomplete.
     out += "\"active\":";
-    appendJsonString(out, ctx_.log->ready() ? bareName(ctx_.log->fileName()) : "");
+    appendJsonString(out, ctx_.log->ready() ? cardName(ctx_.log->fileName()) : "");
     out += ",\"files\":[";
 
-    File root = SD.open("/");
     bool first = true;
     uint32_t total = 0;
+
+    // Two levels, and deliberately only two: the day folders this dashboard
+    // writes, plus whatever sits in the root from before it did. A general
+    // recursive walk would follow anything a laptop had left on the card.
+    File root = SD.open("/");
     if (root) {
         for (File entry = root.openNextFile(); entry; entry = root.openNextFile()) {
-            const char* name = bareName(entry.name());
-            if (entry.isDirectory() || !isLogName(name)) {
-                entry.close();
-                continue;
+            if (entry.isDirectory()) {
+                if (isDayFolder(entry.name())) {
+                    for (File file = entry.openNextFile(); file;
+                         file = entry.openNextFile()) {
+                        if (!file.isDirectory() && isLogName(file.name())) {
+                            appendLog(out, cardName(file.path()),
+                                      static_cast<uint32_t>(file.size()), first, total);
+                        }
+                        file.close();
+                    }
+                }
+            } else if (isLogName(entry.name())) {
+                appendLog(out, cardName(entry.path()),
+                          static_cast<uint32_t>(entry.size()), first, total);
             }
-            if (!first) {
-                out += ',';
-            }
-            first = false;
-            out += "{\"name\":";
-            appendJsonString(out, name);
-            out += ",\"size\":" + String(static_cast<uint32_t>(entry.size()));
-            out += '}';
-            total += static_cast<uint32_t>(entry.size());
             entry.close();
+            if (ctx_.pump != nullptr) {
+                ctx_.pump(ctx_.context);
+            }
         }
         root.close();
     }
@@ -268,11 +334,12 @@ void ServicePage::handleLogs() {
     out += ",\"usedBytes\":" + String(static_cast<uint32_t>(SD.usedBytes() / 1024));
     out += '}';
 
-    server_->send(200, "application/json", out);
+    server_->sendContent(out);
+    server_->sendContent("");
 }
 
 bool ServicePage::sendFile(const char* name) {
-    char path[72];
+    char path[80];
     snprintf(path, sizeof(path), "/%s", name);
 
     File file = SD.open(path, FILE_READ);
@@ -303,7 +370,7 @@ void ServicePage::handleDownload() {
         return;
     }
 
-    char path[72];
+    char path[80];
     snprintf(path, sizeof(path), "/%s", name.c_str());
     File probe = SD.open(path, FILE_READ);
     if (!probe) {
@@ -313,9 +380,17 @@ void ServicePage::handleDownload() {
     const uint32_t size = static_cast<uint32_t>(probe.size());
     probe.close();
 
+    // The name carries its day folder, and a slash in Content-Disposition is
+    // either refused or silently cut back to the leaf - which would put half a
+    // dozen files called 1732_04.emulog in one download folder. Flattened to
+    // an underscore it is the name these files had before they were filed by
+    // day, which is also what the laptop wants to see.
+    String download = name;
+    download.replace('/', '_');
+
     server_->setContentLength(size);
     server_->sendHeader("Content-Disposition",
-                        String("attachment; filename=\"") + name + "\"");
+                        String("attachment; filename=\"") + download + "\"");
     server_->send(200, "application/octet-stream", "");
     sendFile(name.c_str());
 }
@@ -343,7 +418,7 @@ void ServicePage::handleTar() {
         if (!safeName(name)) {
             continue;
         }
-        char path[72];
+        char path[80];
         snprintf(path, sizeof(path), "/%s", name.c_str());
         File entry = SD.open(path, FILE_READ);
         if (!entry) {
@@ -355,8 +430,23 @@ void ServicePage::handleTar() {
     }
     total += 2 * kTarBlock;   // the end-of-archive marker
 
+    // Named for the moment it was fetched, not for its contents. A tuning day
+    // means fetching the card several times, and half a dozen files all called
+    // emulogs.tar in one download folder is a puzzle nobody wants to solve
+    // later. The dashboard's clock is the one both ends have agreed on - the
+    // page sets it from the laptop - so it is the one that names the bundle.
+    char bundle[40] = "emulogs.tar";
+    if (ctx_.rtc != nullptr && ctx_.rtc->present()) {
+        const DateTime now = ctx_.rtc->now();
+        if (now.valid) {
+            snprintf(bundle, sizeof(bundle), "emulogs_%04u%02u%02u_%02u%02u.tar",
+                     now.year, now.month, now.day, now.hour, now.minute);
+        }
+    }
+
     server_->setContentLength(total);
-    server_->sendHeader("Content-Disposition", "attachment; filename=\"emulogs.tar\"");
+    server_->sendHeader("Content-Disposition",
+                        String("attachment; filename=\"") + bundle + "\"");
     server_->send(200, "application/x-tar", "");
 
     WiFiClient client = server_->client();
@@ -374,7 +464,7 @@ void ServicePage::handleTar() {
             continue;
         }
 
-        char path[72];
+        char path[80];
         snprintf(path, sizeof(path), "/%s", name.c_str());
         File entry = SD.open(path, FILE_READ);
         if (!entry) {
@@ -410,7 +500,7 @@ void ServicePage::handleDelete() {
 
     const String names = server_->arg("names");
     const char* active = ctx_.log != nullptr && ctx_.log->ready()
-                             ? bareName(ctx_.log->fileName())
+                             ? cardName(ctx_.log->fileName())
                              : "";
 
     uint16_t deleted = 0;
@@ -435,7 +525,7 @@ void ServicePage::handleDelete() {
             continue;
         }
 
-        char path[72];
+        char path[80];
         snprintf(path, sizeof(path), "/%s", name.c_str());
         if (SD.remove(path)) {
             ++deleted;
@@ -446,8 +536,51 @@ void ServicePage::handleDelete() {
         }
     }
 
+    if (deleted > 0) {
+        pruneEmptyDays();
+    }
+
     String out = "{\"deleted\":" + String(deleted) + ",\"refused\":" + String(refused) + "}";
     server_->send(200, "application/json", out);
+}
+
+// A day folder whose last log has been deleted is litter, and the page has no
+// way to remove one - it only ever names files. Emptying one is the only thing
+// that can leave it behind, so this runs after a delete and nowhere else.
+void ServicePage::pruneEmptyDays() {
+    File root = SD.open("/");
+    if (!root) {
+        return;
+    }
+
+    // Collected first, removed after: rmdir inside the walk would be deleting
+    // the entry the directory handle is standing on.
+    char empty[kMaxPrune][12];
+    uint8_t count = 0;
+
+    for (File entry = root.openNextFile(); entry && count < kMaxPrune;
+         entry = root.openNextFile()) {
+        if (entry.isDirectory() && isDayFolder(entry.name())) {
+            File first = entry.openNextFile();
+            const bool bare = !first;
+            if (first) {
+                first.close();
+            }
+            if (bare) {
+                snprintf(empty[count], sizeof(empty[count]), "/%s", entry.name());
+                ++count;
+            }
+        }
+        entry.close();
+    }
+    root.close();
+
+    for (uint8_t i = 0; i < count; ++i) {
+        if (SD.rmdir(empty[i])) {
+            Serial.print(F("service: removed empty folder "));
+            Serial.println(empty[i]);
+        }
+    }
 }
 
 void ServicePage::handleClock() {

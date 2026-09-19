@@ -39,9 +39,10 @@ namespace ecu {
 // part of why the classic build was dropped - see ecu_link.hpp.
 class EmuLog : public FrameSink {
 public:
-    // Mounts the card and opens "/YYYYMMDD_HHMM_SS.emulog". The date lives in
-    // the filename and nowhere else in the format, so a clock that has not
-    // been read yet is a reason to wait rather than to write a wrong name.
+    // Mounts the card and opens "/YYYYMMDD/HHMM_SS.emulog", creating the day's
+    // folder if it is the first file of the day. The date lives in the path
+    // and nowhere else in the format, so a clock that has not been read yet is
+    // a reason to wait rather than to write a wrong name.
     // Safe to call with no card: logging simply stays off.
     bool begin(const DateTime& now);
 
@@ -142,7 +143,7 @@ private:
     bool writeFailed_ = false;
     const char* failure_ = "not started";
 
-    // Long enough for "/YYYYMMDD_HHMM_SS" plus "_" plus a 24-character session
+    // Long enough for "/YYYYMMDD/HHMM_SS" plus "_" plus a 24-character session
     // name plus ".emulog" plus the collision suffix, with room to spare.
     char fileName_[64] = {0};
     char session_[25] = {0};

@@ -83,21 +83,30 @@ bool EmuLog::openCard() {
 }
 
 bool EmuLog::startStream(const DateTime& now) {
-    // The date lives in the filename and nowhere else in the format. This is
-    // the one thing the writer contributes that the ECU does not - the session
-    // name below is the other.
+    // One folder per day, named for the date, holding files named for the
+    // time. The engine stopping rotates the file, so a tuning day is a dozen
+    // files and a season is several hundred - flat in the root that is a card
+    // nobody can navigate and a service page that lists everything at once.
+    //
+    // The date still lives in the path and nowhere else in the format. The
+    // path is the one thing the writer contributes that the ECU does not; the
+    // session name below is the other.
+    char day[12];
+    snprintf(day, sizeof(day), "/%04u%02u%02u", now.year, now.month, now.day);
+    if (!SD.exists(day) && !SD.mkdir(day)) {
+        return false;
+    }
+
     const char* tail = session_[0] != '\0' ? "_" : "";
-    snprintf(fileName_, sizeof(fileName_), "/%04u%02u%02u_%02u%02u_%02u%s%s.emulog",
-             now.year, now.month, now.day, now.hour, now.minute, now.second,
-             tail, session_);
+    snprintf(fileName_, sizeof(fileName_), "%s/%02u%02u_%02u%s%s.emulog",
+             day, now.hour, now.minute, now.second, tail, session_);
 
     // Two power cycles inside the same second collide, and so does a
     // build-time fallback name used twice. FILE_WRITE truncates, so a
     // collision would quietly destroy the earlier drive.
     for (uint8_t suffix = 1; suffix < 100 && SD.exists(fileName_); ++suffix) {
-        snprintf(fileName_, sizeof(fileName_), "/%04u%02u%02u_%02u%02u_%02u%s%s_%u.emulog",
-                 now.year, now.month, now.day, now.hour, now.minute, now.second,
-                 tail, session_, suffix);
+        snprintf(fileName_, sizeof(fileName_), "%s/%02u%02u_%02u%s%s_%u.emulog",
+                 day, now.hour, now.minute, now.second, tail, session_, suffix);
     }
 
     logFile = SD.open(fileName_, FILE_WRITE);
