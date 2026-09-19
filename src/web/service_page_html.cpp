@@ -229,6 +229,19 @@ function two(n){return (n<10?"0":"")+n}
 function post(url,body){return fetch(url,{method:"POST",
  headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body})}
 
+/* A refusal carries its reason as plain text and a 409, and reading it as
+   JSON threw - which is how "the engine is running" reached the driver as
+   "the dashboard refused the request", with the parked car in front of them
+   as evidence to the contrary. The reason is what gets shown now; `fallback`
+   is only for a request that never arrived at all. */
+function posted(url,body,fallback){
+ return post(url,body).then(function(r){
+  if(r.ok)return r.json();
+  return r.text().then(function(t){
+   throw new Error(t&&t.length?t:"The dashboard refused the request ("+r.status+").")});
+ },function(){throw new Error(fallback)});
+}
+
 /* ---- tabs ---- */
 var tabs=document.querySelectorAll("nav button");
 each(tabs,function(b){b.onclick=function(){
@@ -245,7 +258,10 @@ var status={};
 function loadStatus(){fetch("/api/status").then(function(r){return r.json()}).then(function(s){
  status=s;
  $("build").textContent=s.linkName+" · "+s.baud+" baud · build "+s.build;
- $("fEngine").textContent=s.rpm>0?s.rpm+" rpm":"stopped";
+ /* A dead link freezes the last rpm the ECU ever sent, so the number on its
+    own would read "running" in a parked car. See engine_data_model.hpp. */
+ $("fEngine").textContent=s.link==="OFFLINE"?"no ECU link":
+  (s.rpm>0?s.rpm+" rpm":"stopped");
  $("fBatt").textContent=s.batteryV.toFixed(1)+" V";
  $("fClock").textContent=s.clock;
  $("fIdle").textContent=s.idleLeft>0?Math.floor(s.idleLeft/60)+":"+two(s.idleLeft%60):"—";
@@ -357,11 +373,12 @@ $("del").onclick=function(){
 $("cNo").onclick=function(){$("confirm").hidden=true};
 $("cGo").onclick=function(){
  var names=selected().map(function(f){return f.name});
- post("/api/delete","names="+encodeURIComponent(names.join(",")))
-  .then(function(r){return r.json()}).then(function(d){
+ posted("/api/delete","names="+encodeURIComponent(names.join(",")),
+        "The dashboard did not answer.")
+  .then(function(d){
    toast("Deleted "+d.deleted+(d.refused?", refused "+d.refused:""));
    loadLogs();
-  }).catch(function(){toast("The dashboard refused the request")});
+  }).catch(function(e){toast(e.message);loadLogs()});
 };
 
 function updatePreview(){
@@ -370,9 +387,10 @@ function updatePreview(){
 }
 $("session").oninput=updatePreview;
 $("saveSession").onclick=function(){
- post("/api/session","name="+encodeURIComponent($("session").value))
+ posted("/api/session","name="+encodeURIComponent($("session").value),
+        "The dashboard did not answer.")
   .then(function(){toast("Saved — the next drive will use this name")})
-  .catch(function(){toast("The dashboard refused the request")});
+  .catch(function(e){toast(e.message)});
 };
 
 /* ---- settings ---- */
@@ -396,8 +414,8 @@ function sendSetting(el){
  var it=setData.categories[ci].items[ii];
  var v=el.type==="checkbox"?(el.checked?1:0):el.value;
  el.disabled=true;
- post("/api/settings","category="+ci+"&index="+ii+"&value="+encodeURIComponent(v))
-  .then(function(r){if(!r.ok)throw 0;return r.json()})
+ posted("/api/settings","category="+ci+"&index="+ii+"&value="+encodeURIComponent(v),
+        "The dashboard did not answer.")
   .then(function(d){
    /* The server clamps, so what comes back is the truth and may differ from
       what was typed. */
@@ -407,7 +425,7 @@ function sendSetting(el){
    markChanged(it,el.parentNode);
    toast("Applied \u2014 stored a few seconds after the last change");
   })
-  .catch(function(){toast("The dashboard refused that value");loadSettings()})
+  .catch(function(e){toast(e.message);loadSettings()})
   .then(function(){el.disabled=false;el.focus()});
 }
 
@@ -463,11 +481,12 @@ function loadEvents(){fetch("/api/events").then(function(r){return r.json()}).th
 /* ---- actions ---- */
 $("setClock").onclick=function(){
  var n=new Date();
- post("/api/clock","year="+n.getFullYear()+"&month="+(n.getMonth()+1)+"&day="+n.getDate()+
-  "&hour="+n.getHours()+"&minute="+n.getMinutes()+"&second="+n.getSeconds())
- .then(function(r){if(!r.ok)throw 0;
+ posted("/api/clock","year="+n.getFullYear()+"&month="+(n.getMonth()+1)+"&day="+n.getDate()+
+  "&hour="+n.getHours()+"&minute="+n.getMinutes()+"&second="+n.getSeconds(),
+  "The dashboard did not answer.")
+ .then(function(){
   toast("Clock set — the next log file will be named correctly");loadStatus()})
- .catch(function(){toast("The clock did not accept the time")});
+ .catch(function(e){toast(e.message)});
 };
 $("reboot").onclick=function(){
  if(!confirm("Restart the dashboard now?"))return;

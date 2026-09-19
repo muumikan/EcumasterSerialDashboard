@@ -56,4 +56,11 @@ LinkState EngineDataModel::linkState(uint32_t nowMs) const {
     return LinkState::Online;
 }
 
+bool engineStopped(const EngineDataModel& model, uint32_t nowMs) {
+    if (model.linkState(nowMs) == LinkState::Offline) {
+        return true;
+    }
+    return model.snapshot().rpm < kEngineRunningRpm;
+}
+
 }  // namespace ecu

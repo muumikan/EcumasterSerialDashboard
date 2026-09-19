@@ -36,16 +36,6 @@ ServiceApStatus ServiceAp::status() const {
     return out;
 }
 
-bool ServiceAp::engineStopped(const EngineDataModel& model, uint32_t nowMs) const {
-    const LinkState link = model.linkState(nowMs);
-    if (link == LinkState::Offline) {
-        // Nothing from the ECU at all. The engine cannot be running and
-        // reporting nothing, so this counts as stopped.
-        return true;
-    }
-    return model.snapshot().rpm < kEngineRunningRpm;
-}
-
 void ServiceAp::start() {
     WiFi.mode(WIFI_AP);
     if (!WiFi.softAP(service::kSsid, service::kPassword)) {
@@ -110,7 +100,7 @@ void ServiceAp::loop(const EngineDataModel& model, uint32_t nowMs) {
         return;
     }
 
-    const bool stopped = engineStopped(model, nowMs);
+    const bool stopped = ecu::engineStopped(model, nowMs);
 
     // Running the engine clears everything: the settle timer, and the latch
     // that keeps a timed-out access point from coming straight back up.

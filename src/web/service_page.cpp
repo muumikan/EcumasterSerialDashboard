@@ -141,10 +141,17 @@ void ServicePage::install() {
     server_->onNotFound([this]() { handleNotFound(); });
 }
 
+// Every endpoint that changes something on the dashboard goes through here.
+//
+// The test is engineStopped(), not the raw rpm field. Cutting the ignition
+// cuts the ECU's power mid-frame, so the snapshot keeps reporting the last rpm
+// it ever saw - and a dashboard that had been idling at 850 rpm when the key
+// turned then refused every delete and every setting until it was rebooted,
+// while cheerfully serving this page. See engine_data_model.hpp.
 bool ServicePage::writable() {
-    const bool running = ctx_.model != nullptr &&
-                         ctx_.model->snapshot().rpm >= kEngineRunningRpm;
-    if (!running) {
+    const bool stopped =
+        ctx_.model == nullptr || engineStopped(*ctx_.model, millis());
+    if (stopped) {
         return true;
     }
     server_->send(409, "text/plain",

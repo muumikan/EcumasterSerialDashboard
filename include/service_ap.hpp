@@ -60,7 +60,6 @@ public:
 private:
     void start();
     void stop(const char* why);
-    bool engineStopped(const EngineDataModel& model, uint32_t nowMs) const;
 
     const DashSettings* settings_ = nullptr;
 

@@ -24,10 +24,6 @@ enum class AlarmId : uint8_t {
 
 constexpr uint8_t kAlarmCount = static_cast<uint8_t>(AlarmId::Count);
 
-// Below this the engine is not turning, so oil pressure, battery voltage and
-// everything else that is only meaningful under load stays silent.
-constexpr uint16_t kEngineRunningRpm = 500;
-
 // Limits for one alarm. Held as data rather than baked into the comparison, so
 // the setup page can reach them without a reflash.
 struct AlarmLimits {

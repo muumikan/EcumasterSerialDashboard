@@ -50,4 +50,17 @@ private:
     bool everUpdated_ = false;
 };
 
+// Is the engine stopped, as far as this dashboard can tell?
+//
+// Not the same question as `rpm < kEngineRunningRpm`, and the difference is
+// the whole reason this exists. Killing the ignition cuts the ECU's power, so
+// the last frame it ever sent freezes in the snapshot at whatever the engine
+// was doing - often several hundred rpm, sometimes more. Read on its own, the
+// rpm field then says "running" for as long as the dashboard stays powered.
+//
+// A dead link means the engine is stopped: it cannot be turning and reporting
+// nothing. Anything the answer gates - the access point, and every write the
+// service page accepts - has to ask it this way.
+bool engineStopped(const EngineDataModel& model, uint32_t nowMs);
+
 }  // namespace ecu

@@ -77,6 +77,14 @@ struct EngineSnapshot {
     uint8_t  boostTableSet = 0;       // which boost table is live (not tablesSet)
 };
 
+// Below this the engine is not turning, so oil pressure, battery voltage and
+// everything else that is only meaningful under load stays silent.
+//
+// Lives beside the snapshot rather than with the alarms because three
+// different things ask the question - the alarms, the access point and the
+// service page - and only one of them is an alarm.
+constexpr uint16_t kEngineRunningRpm = 500;
+
 // Health of the ECU -> dashboard link, derived from frame arrival timing.
 enum class LinkState : uint8_t {
     Offline,  // nothing received (yet), or the link has dropped
