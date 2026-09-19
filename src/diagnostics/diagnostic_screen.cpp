@@ -12,8 +12,12 @@ namespace {
 constexpr lv_coord_t kColWidth = 240;
 constexpr lv_coord_t kRowHeight = 17;
 
+// Names are yellow and values are white, the same way round as every
+// measurement cell. This page is nothing but names and values, so it is the
+// page where getting that wrong cost the most.
 lv_obj_t* makeHeading(lv_obj_t* parent, lv_coord_t y, const char* text) {
     lv_obj_t* label = makeCaption(parent, text);
+    lv_obj_set_style_text_color(label, theme::caption(), 0);
     lv_obj_align(label, LV_ALIGN_TOP_LEFT, 0, y);
     return label;
 }
@@ -22,6 +26,7 @@ lv_obj_t* makeHeading(lv_obj_t* parent, lv_coord_t y, const char* text) {
 // updated later.
 lv_obj_t* makeRow(lv_obj_t* parent, lv_coord_t y, const char* caption) {
     lv_obj_t* left = makeCaption(parent, caption);
+    lv_obj_set_style_text_color(left, theme::caption(), 0);
     lv_obj_align(left, LV_ALIGN_TOP_LEFT, 0, y);
 
     lv_obj_t* right = lv_label_create(parent);

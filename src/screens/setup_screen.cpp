@@ -141,7 +141,10 @@ void SetupScreen::buildRows() {
         lv_obj_set_style_border_width(row.root, 1, 0);
         lv_obj_set_style_border_side(row.root, LV_BORDER_SIDE_BOTTOM, 0);
 
+        // Yellow, like every other name on the dashboard; the unit beside the
+        // value stays grey, like every other unit.
         row.name = makeCaption(row.root, "");
+        lv_obj_set_style_text_color(row.name, theme::caption(), 0);
         lv_obj_align(row.name, LV_ALIGN_LEFT_MID, 10, 0);
 
         row.value = lv_label_create(row.root);

@@ -99,7 +99,7 @@ void AlarmsScreen::buildHeader() {
         lv_obj_t* caption = column.number
                                 ? makeNumberCell(header, column.x, column.caption)
                                 : makeCell(header, column.x, column.caption);
-        lv_obj_set_style_text_color(caption, theme::dim(), 0);
+        lv_obj_set_style_text_color(caption, theme::caption(), 0);
     }
 }
 
@@ -142,13 +142,13 @@ void AlarmsScreen::buildFooter() {
     lv_obj_set_style_border_width(footer, 1, 0);
     lv_obj_set_style_border_side(footer, LV_BORDER_SIDE_TOP, 0);
 
-    lv_obj_set_style_text_color(makeCell(footer, 12, "ACTIVE"), theme::dim(), 0);
+    lv_obj_set_style_text_color(makeCell(footer, 12, "ACTIVE"), theme::caption(), 0);
     activeCount_ = makeCell(footer, 66, "0");
 
-    lv_obj_set_style_text_color(makeCell(footer, 92, "TOTAL"), theme::dim(), 0);
+    lv_obj_set_style_text_color(makeCell(footer, 92, "TOTAL"), theme::caption(), 0);
     totalCount_ = makeCell(footer, 143, "0");
 
-    lv_obj_set_style_text_color(makeCell(footer, 168, "RUN"), theme::dim(), 0);
+    lv_obj_set_style_text_color(makeCell(footer, 168, "RUN"), theme::caption(), 0);
     runTime_ = makeCell(footer, 208, "0:00");
 
     // Only says anything when the list is longer than the screen.
