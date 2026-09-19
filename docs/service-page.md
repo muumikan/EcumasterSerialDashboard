@@ -58,10 +58,23 @@ bug is not possible here, since there is no data to show. That is the trade.
 
 ## The page
 
-**Logs.** Every `.emulog` on the card with its size and a checkbox. One selected
-file downloads as itself; several come down as a single `.tar`, uncompressed
-because the files are already gzip. The file currently being written is listed
-but cannot be selected or deleted - it is still open.
+**Logs.** Every `.emulog` on the card with its size and a checkbox, grouped
+under the day it was recorded. The dashboard writes each day into its own
+folder - `/20260919/1732_04.emulog` - because the engine stopping rotates the
+file, so a tuning day is a dozen of them and a season is several hundred. The
+day's heading carries its own checkbox, which is how a whole day is taken or
+dropped in one go.
+
+Logs left in the card's root from before this are still listed, under a
+heading of their own, and work exactly as they did.
+
+One selected file downloads as itself, with its day folded into the name so
+the laptop's download folder does not end up holding six files called
+`1732_04.emulog`. Several come down as a single `.tar`, uncompressed because
+the files are already gzip, named for the moment it was fetched -
+`emulogs_20260919_1732.tar` - and holding the day folders, so unpacking it
+reproduces the card's layout. The file currently being written is listed but
+cannot be selected or deleted - it is still open.
 
 Deleting asks first and names what it is about to remove. There is no "delete
 everything" form: the page confirms a list and the server acts on that list.
@@ -122,4 +135,17 @@ sitting there looking empty, and any script error is shown the same way.
 - Downloads run LVGL between blocks (`ServiceContext::pump`), so the screen shows
   progress instead of freezing for the length of the transfer.
 - Filenames from the client are checked against `safeName()` before anything is
-  opened: no slashes, no `..`, and a `.emulog` suffix.
+  opened: a `.emulog` suffix, no `..`, and either no slash at all or exactly
+  one, preceded by eight digits. A request cannot name a folder this dashboard
+  did not create.
+- "Is the engine running", for the 409, is `engineStopped()` and not the rpm
+  field. Cutting the ignition cuts the ECU's power mid-frame, so the snapshot
+  keeps reporting the last rpm it ever saw; read on its own it says "running"
+  in a parked car, and it refused every delete and every setting change on 19
+  September 2026 until the dashboard was rebooted.
+- A refusal's own text is what the page shows. It used to read the 409 as JSON,
+  throw, and report "the dashboard refused the request", which said nothing
+  about which of the two reasons it was.
+- The log listing is sent in chunks rather than built whole. A card holding a
+  season of logs is tens of kilobytes of JSON, and that much heap held while
+  the radio is up is heap the radio wanted.

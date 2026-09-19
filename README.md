@@ -135,7 +135,7 @@ src/diagnostics/    diagnostics page and the serial text report
 src/logging/        EmuLog — .emulog files to the SD card
 src/hal/            display, touch and RTC bring-up
 src/web/            service access point, HTTP server and the page it serves
-docs/               architecture, protocol, decisions
+docs/               architecture, protocol, decisions, vendor change logs
 hardware/ wiring/   pin assignment and the ECU-to-dash signal chain
 ```
 
@@ -153,6 +153,12 @@ Working: the EDL-1 link, data model, alarm engine, eight pages, swipe
 navigation, settings in flash, the real-time clock, SD logging, and the service
 access point with its page — access point, page, log download and clock sync
 confirmed on the car on 16 September 2026.
+
+The 19 September session found three defects, all fixed: the SETUP page's
+Limits category rebooted the board by exhausting LVGL's object pool, and every
+write the service page accepts was refused because a dead ECU leaves its last
+rpm frozen in the snapshot, which then reads as a running engine. Logs are
+written into a folder per day from that session on.
 
 Not yet exercised on the car: the multi-file `.tar` download, deleting logs,
 starting the engine mid-download, and the idle timeout. They are listed with

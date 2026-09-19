@@ -5,6 +5,64 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-19 — second service-page session, three defects
+
+Observed by using the dashboard, all three fixed in this session. The logs page
+itself worked well: the listing, the downloads and opening the files in the
+Client all behaved.
+
+- **The SETUP page rebooted the dashboard on the Limits category.** Opening it
+  panicked and restarted the board, every time, with nothing printed. The cause
+  is LVGL's fixed pool: `lv_obj_create` returns NULL when it is full and LVGL
+  then dereferences that NULL one call later, with no assert and no log, so an
+  out-of-memory looks exactly like a wild pointer. Limits is eighteen rows of
+  about eight objects each, built in one go, and the IDLE and BOOST pages added
+  on 2026-09-14 had taken enough of the pool to put it over. The rows are a
+  fixed pool of eight now, re-labelled rather than rebuilt, so the page costs
+  the same whatever is on it; `LV_MEM_SIZE` went from 96 to 128 kB for margin,
+  and what is left of the pool is on the service page's Diagnostics tab.
+
+  The run on 2026-09-08 listed "whether the LVGL object pool holds the Limits
+  category" as a thing to check. It did not.
+
+- **Every write the service page accepts was refused.** Deleting a log said
+  "the dashboard refused the request"; changing a limit or enabling an alarm
+  failed the same way. Both are the 409 from `writable()`, which asked
+  `snapshot().rpm >= kEngineRunningRpm` with no regard for the link. Killing
+  the ignition cuts the ECU's power mid-frame, so the snapshot holds the last
+  rpm it ever saw - the same freeze the engine-off summary was fixed for on
+  2026-09-08 - and the dashboard spent the whole session believing an engine
+  that had been idling at 850 rpm was still running. It uses `engineStopped()`
+  now, which both this and the access point read from one place.
+
+  It had worked before because it depends on how the car was shut down: with
+  the ECU still powered, the last frame says 0 rpm.
+
+- **The refusal did not say why.** The page read the 409's plain text as JSON,
+  which threw, and reported a generic refusal - so the one message that would
+  have named the cause was thrown away. Every write now shows what the server
+  actually said.
+
+Added in the same session, both asked for after living with the logs:
+
+- Logs are written into a folder per day, `/20260919/1732_04.emulog`. Files
+  already in the root are left there and still listed.
+- The multi-file `.tar` is named for the moment it was fetched, since a tuning
+  day means fetching several.
+
+### Worth checking on the next run
+
+- SETUP: that the Limits and Alarms categories open, that a swipe up and down
+  walks a long category, and - the thing this page lost when it stopped being
+  an LVGL scroller - that a vertical swipe starting on a `+` or `-` does not
+  land as a press on it.
+- Deleting a log, now that it can be reached at all, and that the day's folder
+  disappears with its last file.
+- That the dashboard still has heap to spare with the radio up: the service
+  page reports free heap and the LVGL pool side by side under Diagnostics.
+
+---
+
 ## 2026-09-16 — service page, first run on the car
 
 Working on the hardware, observed: the access point comes up once `Service AP`

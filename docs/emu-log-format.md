@@ -64,6 +64,11 @@ The log's date and time come from the **filename**: `20230519_0615_08.emulog`.
 That is the only thing the writer contributes that the ECU does not, and the
 only reason logging needs the RTC.
 
+This dashboard splits that name across a folder and a file - `/20260919/
+1732_04.emulog` - so a season of logs is navigable on the card. Nothing in the
+format sees the difference, and downloading one through the service page puts
+the date back into the filename.
+
 ## How this was established
 
 Antti supplied two Client-written logs and three CSV exports, two of them the
