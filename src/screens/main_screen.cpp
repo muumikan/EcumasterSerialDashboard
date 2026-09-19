@@ -36,6 +36,7 @@ void MainScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_pad_all(rpmBox, 12, 0);
 
     lv_obj_t* rpmCaption = makeCaption(rpmBox, "RPM");
+    lv_obj_set_style_text_color(rpmCaption, theme::caption(), 0);
     lv_obj_align(rpmCaption, LV_ALIGN_TOP_LEFT, 0, 0);
 
     rpmValue_ = lv_label_create(rpmBox);
@@ -59,15 +60,16 @@ void MainScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_border_side(mapBox, LV_BORDER_SIDE_LEFT, 0);
 
     lv_obj_t* boostCaption = makeCaption(mapBox, "BOOST");
+    lv_obj_set_style_text_color(boostCaption, theme::caption(), 0);
     lv_obj_align(boostCaption, LV_ALIGN_TOP_LEFT, 0, 0);
 
     boostValue_ = lv_label_create(mapBox);
     lv_label_set_text(boostValue_, "+0.00");
-    lv_obj_set_style_text_font(boostValue_, &lv_font_montserrat_28, 0);
-    lv_obj_align(boostValue_, LV_ALIGN_TOP_LEFT, 0, 22);
+    lv_obj_set_style_text_font(boostValue_, &lv_font_montserrat_36, 0);
+    lv_obj_align(boostValue_, LV_ALIGN_TOP_LEFT, 0, 20);
 
     mapLabel_ = makeCaption(mapBox, "bar  MAP 0 kPa");
-    lv_obj_align(mapLabel_, LV_ALIGN_TOP_LEFT, 0, 58);
+    lv_obj_align(mapLabel_, LV_ALIGN_TOP_LEFT, 0, 64);
 
     lv_obj_t* boostTrack = makePanel(mapBox, 0, 82, kBarWidth, kBarHeight);
     lv_obj_set_style_bg_color(boostTrack, theme::track(), 0);
@@ -90,10 +92,10 @@ void MainScreen::create(lv_obj_t* parent) {
 
     // ---- tiles ----------------------------------------------------------
     const lv_coord_t y = kHeroHeight;
-    clt_.create(root_, 0, y, kTileWidth, kTileHeight, "CLT", "C", &lv_font_montserrat_28);
-    oil_.create(root_, kTileWidth, y, kTileWidth, kTileHeight, "OIL P", "bar", &lv_font_montserrat_28);
-    lambda_.create(root_, kTileWidth * 2, y, kTileWidth, kTileHeight, "LAMBDA", "", &lv_font_montserrat_28);
-    battery_.create(root_, kTileWidth * 3, y, kTileWidth, kTileHeight, "BATT", "V", &lv_font_montserrat_28);
+    clt_.create(root_, 0, y, kTileWidth, kTileHeight, "CLT", "C", &lv_font_montserrat_36);
+    oil_.create(root_, kTileWidth, y, kTileWidth, kTileHeight, "OIL P", "bar", &lv_font_montserrat_36);
+    lambda_.create(root_, kTileWidth * 2, y, kTileWidth, kTileHeight, "LAMBDA", "", &lv_font_montserrat_36);
+    battery_.create(root_, kTileWidth * 3, y, kTileWidth, kTileHeight, "BATT", "V", &lv_font_montserrat_36);
 }
 
 void MainScreen::update(const EngineDataModel& model,

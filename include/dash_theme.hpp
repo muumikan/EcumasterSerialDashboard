@@ -29,6 +29,17 @@ inline lv_color_t text()      { return lv_color_hex(0xF0F0F0); }
 inline lv_color_t dim()       { return lv_color_hex(0x828282); }
 inline lv_color_t dotOff()    { return lv_color_hex(0x383838); }
 
+// What a measurement is called, on every cell that holds one. Yellow rather
+// than the grey it started as: grey on black is the lowest contrast on the
+// screen, it was the hardest thing to read in daylight, and yellow-on-black
+// is what an Ecumaster dash looks like, so the panel now matches the software
+// beside it.
+//
+// Deliberately clear of warn() below, which is an amber with red in it. These
+// two are never far apart on screen and they must not be mistaken for each
+// other: one is a name, the other is a verdict.
+inline lv_color_t caption()   { return lv_color_hex(0xE8C547); }
+
 inline lv_color_t good()      { return lv_color_hex(0x57C08A); }
 inline lv_color_t warn()      { return lv_color_hex(0xE8A33D); }
 inline lv_color_t crit()      { return lv_color_hex(0xE2504A); }

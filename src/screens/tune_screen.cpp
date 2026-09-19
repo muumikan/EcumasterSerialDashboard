@@ -28,11 +28,13 @@ void TuneScreen::create(lv_obj_t* parent) {
     root_ = makePanel(parent, 0, 0, theme::kPageWidth, theme::kPageHeight);
 
     // ---- AFR vs target, two columns wide --------------------------------
-    afr_.create(root_, 0, 0, kCol * 2, kRow, "AFR / TARGET", "", &lv_font_montserrat_28);
+    afr_.create(root_, 0, 0, kCol * 2, kRow, "AFR / TARGET", "", &lv_font_montserrat_36);
     lv_obj_align(afr_.value(), LV_ALIGN_TOP_LEFT, 0, 20);
 
     targetLabel_ = makeCaption(afr_.root(), "tgt --");
-    lv_obj_align(targetLabel_, LV_ALIGN_TOP_LEFT, 96, 30);
+    // Clear of the reading beside it at its widest: "7500" is 90 px in
+    // Montserrat 36, and 96 left six of them.
+    lv_obj_align(targetLabel_, LV_ALIGN_TOP_LEFT, 104, 30);
 
     lv_obj_t* devTrack = makePanel(afr_.root(), 0, kRow - 8 - 8 - kDevHeight, kDevWidth, kDevHeight);
     lv_obj_set_style_bg_color(devTrack, theme::track(), 0);
@@ -46,15 +48,15 @@ void TuneScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(mid, theme::dim(), 0);
     lv_obj_set_style_bg_opa(mid, LV_OPA_COVER, 0);
 
-    knock_.create(root_, kCol * 2, 0, kCol, kRow, "KNOCK", "V", &lv_font_montserrat_28);
+    knock_.create(root_, kCol * 2, 0, kCol, kRow, "KNOCK", "V", &lv_font_montserrat_36);
 
-    ignition_.create(root_, 0, kRow, kCol, kRow, "IGN", "BTDC", &lv_font_montserrat_28);
-    pulseWidth_.create(root_, kCol, kRow, kCol, kRow, "INJ PW", "ms", &lv_font_montserrat_28);
-    dutyCycle_.create(root_, kCol * 2, kRow, kCol, kRow, "INJ DC", "%", &lv_font_montserrat_28);
+    ignition_.create(root_, 0, kRow, kCol, kRow, "IGN", "BTDC", &lv_font_montserrat_36);
+    pulseWidth_.create(root_, kCol, kRow, kCol, kRow, "INJ PW", "ms", &lv_font_montserrat_36);
+    dutyCycle_.create(root_, kCol * 2, kRow, kCol, kRow, "INJ DC", "%", &lv_font_montserrat_36);
 
-    map_.create(root_, 0, kRow * 2, kCol, kRow, "MAP", "kPa", &lv_font_montserrat_28);
-    tps_.create(root_, kCol, kRow * 2, kCol, kRow, "TPS", "%", &lv_font_montserrat_28);
-    rpm_.create(root_, kCol * 2, kRow * 2, kCol, kRow, "RPM", "rpm", &lv_font_montserrat_28);
+    map_.create(root_, 0, kRow * 2, kCol, kRow, "MAP", "kPa", &lv_font_montserrat_36);
+    tps_.create(root_, kCol, kRow * 2, kCol, kRow, "TPS", "%", &lv_font_montserrat_36);
+    rpm_.create(root_, kCol * 2, kRow * 2, kCol, kRow, "RPM", "rpm", &lv_font_montserrat_36);
 }
 
 void TuneScreen::update(const EngineDataModel& model,

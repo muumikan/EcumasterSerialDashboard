@@ -40,6 +40,10 @@
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_28 1
+// The size the three-across pages read at. 28 was too small in the car and 48
+// does not fit a 160 x 95 cell under its caption, so there had to be one in
+// between. Flash only; fonts are const data.
+#define LV_FONT_MONTSERRAT_36 1
 #define LV_FONT_MONTSERRAT_48 1
 #define LV_FONT_DEFAULT &lv_font_montserrat_14
 
