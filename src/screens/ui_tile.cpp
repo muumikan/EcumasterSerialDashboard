@@ -98,6 +98,27 @@ void Tile::clear() {
     setSeverity(AlarmSeverity::None);
 }
 
+void Tile::showFault() {
+    setText("ERR");
+    setSeverity(AlarmSeverity::Critical);
+}
+
+void Tile::setCaption(const char* caption) {
+    setLabelText(caption_, caption);
+}
+
+const char* mixtureName(bool afr) {
+    return afr ? "AFR" : "LAMBDA";
+}
+
+void showMixture(Tile& tile, const EngineSnapshot& s, bool afr) {
+    if (afr) {
+        tile.setFloat(s.wboAfr, 1);
+    } else {
+        tile.setFloat(s.wboLambda, 2);
+    }
+}
+
 void Tile::setSeverity(AlarmSeverity severity) {
     if (severity == severity_) {
         return;  // restyling every frame would thrash LVGL's invalidation

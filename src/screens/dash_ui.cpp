@@ -121,6 +121,11 @@ void DashUi::begin(lv_obj_t* screen,
 
 void DashUi::applySettings() {
     alarms_.settings() = settings_->alarms;
+    for (uint8_t i = 0; i < kPageCount; ++i) {
+        if (pages_[i] != nullptr) {
+            pages_[i]->applySettings(*settings_);
+        }
+    }
     setup_.refresh();
     display::setBrightness(settings_->nightMode ? settings_->nightBrightnessPct
                                                : settings_->brightnessPct);

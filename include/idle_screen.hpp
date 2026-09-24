@@ -20,6 +20,7 @@ public:
                 uint32_t nowMs) override;
     const char* name() const override { return "IDLE"; }
     bool showNoData() override;
+    void applySettings(const DashSettings& settings) override;
 
 private:
     Tile rpm_;
@@ -34,6 +35,8 @@ private:
     Tile ignition_;
     Tile angleCorrection_;
     Tile map_;
+
+    bool mixtureAfr_ = false;
 };
 
 }  // namespace ecu

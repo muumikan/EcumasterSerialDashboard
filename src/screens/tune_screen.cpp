@@ -48,7 +48,8 @@ void TuneScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_bg_color(mid, theme::dim(), 0);
     lv_obj_set_style_bg_opa(mid, LV_OPA_COVER, 0);
 
-    knock_.create(root_, kCol * 2, 0, kCol, kRow, "KNOCK", "V", &lv_font_montserrat_36);
+    // Knock over the ECU's noise threshold; 1.00 is where the ECU counts it.
+    knock_.create(root_, kCol * 2, 0, kCol, kRow, "KNOCK", "x noise", &lv_font_montserrat_36);
 
     ignition_.create(root_, 0, kRow, kCol, kRow, "IGN", "BTDC", &lv_font_montserrat_36);
     pulseWidth_.create(root_, kCol, kRow, kCol, kRow, "INJ PW", "ms", &lv_font_montserrat_36);
@@ -69,11 +70,15 @@ void TuneScreen::update(const EngineDataModel& model,
 
     char text[24];
 
-    afr_.setFloat(s.wboAfr, 1);
+    showMixture(afr_, s, mixtureAfr_);
 
+    // The target comes from afrTarget in either unit. The stream's own
+    // lambdaTarget reads zero in every log from this car; afrTarget does not.
     const bool haveTarget = s.afrTarget >= kTargetPresent;
-    if (haveTarget) {
+    if (haveTarget && mixtureAfr_) {
         snprintf(text, sizeof(text), "tgt %.1f", s.afrTarget);
+    } else if (haveTarget) {
+        snprintf(text, sizeof(text), "tgt %.2f", s.afrTarget / kStoichAfr);
     } else {
         snprintf(text, sizeof(text), "tgt --");
     }
@@ -97,7 +102,11 @@ void TuneScreen::update(const EngineDataModel& model,
     const bool wide = deviation > 0.6f || deviation < -0.6f;
     lv_obj_set_style_bg_color(deviationFill_, wide ? theme::warn() : theme::good(), 0);
 
-    knock_.setFloat(s.knockLevelV, 1);
+    if (s.engineNoiseV >= kMinEngineNoiseV) {
+        knock_.setFloat(knockRatio(s), 2);
+    } else {
+        knock_.setText("--");   // no threshold sent, nothing to measure against
+    }
     ignition_.setFloat(s.ignAngleDeg, 1);
     pulseWidth_.setFloat(s.injPulseWidthMs, 1);
     dutyCycle_.setInt(static_cast<int>(s.injDutyPct));
@@ -105,8 +114,8 @@ void TuneScreen::update(const EngineDataModel& model,
     tps_.setInt(s.tpsPct);
     rpm_.setInt(s.rpm);
 
-    // Still the Lean alarm: it watches lambda, which is the same mixture this
-    // tile now shows in the other unit.
+    // The Lean alarm watches lambda whichever unit this tile is showing; it is
+    // the same mixture either way.
     afr_.setSeverity(alarms.severity(AlarmId::Lean));
     knock_.setSeverity(alarms.severity(AlarmId::Knock));
     dutyCycle_.setSeverity(alarms.severity(AlarmId::InjectorDuty));
@@ -125,6 +134,11 @@ bool TuneScreen::showNoData() {
     tps_.clear();
     rpm_.clear();
     return true;
+}
+
+void TuneScreen::applySettings(const DashSettings& settings) {
+    mixtureAfr_ = settings.mixtureAfr;
+    afr_.setCaption(mixtureAfr_ ? "AFR / TARGET" : "LAMBDA / TARGET");
 }
 
 }  // namespace ecu

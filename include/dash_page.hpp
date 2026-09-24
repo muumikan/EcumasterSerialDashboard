@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "alarm_engine.hpp"
+#include "dash_settings.hpp"
 #include "engine_data_model.hpp"
 
 namespace ecu {
@@ -49,6 +50,11 @@ public:
     // alarm list, the diagnostics, setup - keep the default and go on being
     // updated, because what they show is still true.
     virtual bool showNoData() { return false; }
+
+    // The settings that change how a page reads rather than what it watches:
+    // the mixture unit, the rpm scale. Called after create() and again after
+    // every edit, from the panel or the service page.
+    virtual void applySettings(const DashSettings& settings) { (void)settings; }
 
     // A page's chance to use a swipe before it turns the page. Return true to
     // say the gesture was consumed. Pages that fit on the screen - which is

@@ -79,7 +79,7 @@ void IdleScreen::update(const EngineDataModel& model,
 
     // rpm and mixture come from every protocol; the loop's own state does not.
     rpm_.setInt(s.rpm);
-    afr_.setFloat(s.wboAfr, 1);
+    showMixture(afr_, s, mixtureAfr_);
     ignition_.setFloat(s.ignAngleDeg, 1);
     map_.setInt(s.mapKpa);
 
@@ -137,6 +137,11 @@ bool IdleScreen::showNoData() {
     angleCorrection_.clear();
     map_.clear();
     return true;
+}
+
+void IdleScreen::applySettings(const DashSettings& settings) {
+    mixtureAfr_ = settings.mixtureAfr;
+    afr_.setCaption(mixtureName(mixtureAfr_));
 }
 
 }  // namespace ecu

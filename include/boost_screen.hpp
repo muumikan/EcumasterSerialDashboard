@@ -19,6 +19,7 @@ public:
                 uint32_t nowMs) override;
     const char* name() const override { return "BOOST"; }
     bool showNoData() override;
+    void applySettings(const DashSettings& settings) override;
 
 private:
     Tile map_;
@@ -33,6 +34,8 @@ private:
     Tile rpm_;
     Tile tps_;
     Tile afr_;
+
+    bool mixtureAfr_ = false;
 };
 
 }  // namespace ecu

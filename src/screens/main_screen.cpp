@@ -110,7 +110,10 @@ void MainScreen::update(const EngineDataModel& model,
     snprintf(text, sizeof(text), "%u", static_cast<unsigned>(s.rpm));
     setLabelText(rpmValue_, text);
 
-    lv_coord_t rpmWidth = static_cast<lv_coord_t>((s.rpm / 7500.0f) * (kRpmBoxWidth - 24));
+    // Full scale where the shift lights are all lit, so the bar and the strip
+    // above it agree about how close the engine is to the limit.
+    lv_coord_t rpmWidth =
+        static_cast<lv_coord_t>((s.rpm / static_cast<float>(rpmFullScale_)) * (kRpmBoxWidth - 24));
     if (rpmWidth < 0) rpmWidth = 0;
     if (rpmWidth > kRpmBoxWidth - 24) rpmWidth = kRpmBoxWidth - 24;
     lv_obj_set_width(rpmBar_, rpmWidth);
@@ -131,7 +134,19 @@ void MainScreen::update(const EngineDataModel& model,
         lv_obj_set_pos(boostFill_, now, 0);
         lv_obj_set_width(boostFill_, zero - now);
     }
-    lv_obj_set_style_bg_color(boostFill_, boost > 1.05f ? theme::warn() : theme::cyan(), 0);
+    // Coloured by the overboost alarm, so the bar, the number and the status
+    // bar all change at the limit set on the setup page - not at a number of
+    // this page's own.
+    const AlarmSeverity over = alarms.severity(AlarmId::Overboost);
+    lv_color_t fill = theme::cyan();
+    lv_color_t reading = theme::text();
+    if (over == AlarmSeverity::Warning) {
+        fill = reading = theme::warn();
+    } else if (over == AlarmSeverity::Critical) {
+        fill = reading = theme::crit();
+    }
+    lv_obj_set_style_bg_color(boostFill_, fill, 0);
+    lv_obj_set_style_text_color(boostValue_, reading, 0);
 
     // From the run peaks, which see every frame, rather than from what this
     // page happened to be painted with: a peak between two repaints is still
@@ -146,7 +161,7 @@ void MainScreen::update(const EngineDataModel& model,
 
     clt_.setInt(s.cltC);
     oil_.setFloat(s.oilPressureBar, 1);
-    lambda_.setFloat(s.wboLambda, 2);
+    showMixture(lambda_, s, mixtureAfr_);
     battery_.setFloat(s.batteryV, 1);
 
     clt_.setSeverity(alarms.severity(AlarmId::Coolant));
@@ -162,6 +177,7 @@ bool MainScreen::showNoData() {
     setLabelText(rpmValue_, "--");
     lv_obj_set_width(rpmBar_, 0);
     setLabelText(boostValue_, "--");
+    lv_obj_set_style_text_color(boostValue_, theme::text(), 0);
     setLabelText(mapLabel_, "bar  MAP -- kPa");
     lv_obj_set_width(boostFill_, 0);
     // The peak mark and its label stay: they are this run's record, not a
@@ -172,6 +188,12 @@ bool MainScreen::showNoData() {
     lambda_.clear();
     battery_.clear();
     return true;
+}
+
+void MainScreen::applySettings(const DashSettings& settings) {
+    mixtureAfr_ = settings.mixtureAfr;
+    lambda_.setCaption(mixtureName(mixtureAfr_));
+    rpmFullScale_ = settings.shiftAllRpm >= 1000 ? settings.shiftAllRpm : 7500;
 }
 
 }  // namespace ecu

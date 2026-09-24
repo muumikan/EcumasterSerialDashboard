@@ -26,6 +26,12 @@ public:
     // nothing current to put in it, rather than the last value it was given.
     void clear();
 
+    // The ECU has flagged this cell's sensor as failed, so the number it is
+    // sending is its fallback value, not a measurement. "ERR", in red.
+    void showFault();
+
+    void setCaption(const char* caption);
+
     lv_obj_t* root() const { return root_; }
     lv_obj_t* value() const { return value_; }
 
@@ -46,5 +52,10 @@ lv_obj_t* makeCaption(lv_obj_t* parent, const char* text);
 // invalidates on every call whatever it is given, so a page refreshed at frame
 // rate was repainting every digit on it whether or not any of them moved.
 void setLabelText(lv_obj_t* label, const char* text);
+
+// Mixture in whichever unit the driver chose: lambda to two places, or AFR to
+// one. One formatter, so every page that shows mixture shows the same thing.
+const char* mixtureName(bool afr);
+void showMixture(Tile& tile, const EngineSnapshot& s, bool afr);
 
 }  // namespace ecu

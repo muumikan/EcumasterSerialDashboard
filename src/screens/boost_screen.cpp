@@ -68,7 +68,6 @@ void BoostScreen::update(const EngineDataModel& model,
                          const AlarmEngine& alarms,
                          const RunPeaks& peaks,
                          uint32_t nowMs) {
-    (void)alarms;
     (void)peaks;
     (void)nowMs;
     const EngineSnapshot& s = model.snapshot();
@@ -76,9 +75,10 @@ void BoostScreen::update(const EngineDataModel& model,
     char text[24];
 
     map_.setInt(s.mapKpa);
+    map_.setSeverity(alarms.severity(AlarmId::Overboost));
     rpm_.setInt(s.rpm);
     tps_.setInt(s.tpsPct);
-    afr_.setFloat(s.wboAfr, 1);
+    showMixture(afr_, s, mixtureAfr_);
 
     lv_obj_set_width(mapFill_, barX(static_cast<float>(s.mapKpa)));
 
@@ -130,6 +130,11 @@ bool BoostScreen::showNoData() {
     tps_.clear();
     afr_.clear();
     return true;
+}
+
+void BoostScreen::applySettings(const DashSettings& settings) {
+    mixtureAfr_ = settings.mixtureAfr;
+    afr_.setCaption(mixtureName(mixtureAfr_));
 }
 
 }  // namespace ecu

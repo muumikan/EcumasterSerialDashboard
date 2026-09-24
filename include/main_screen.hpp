@@ -15,6 +15,7 @@ public:
                 uint32_t nowMs) override;
     const char* name() const override { return "DRIVE"; }
     bool showNoData() override;
+    void applySettings(const DashSettings& settings) override;
 
 private:
     lv_obj_t* rpmValue_ = nullptr;
@@ -31,6 +32,9 @@ private:
     Tile battery_;
 
     float boostPeak_ = -9.0f;
+
+    bool mixtureAfr_ = false;
+    uint16_t rpmFullScale_ = 7500;
 };
 
 }  // namespace ecu
