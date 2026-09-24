@@ -114,8 +114,14 @@ void TuneScreen::update(const EngineDataModel& model,
     // Shown as the trim itself rather than the ECU's 100-based figure: -6
     // reads as "taking fuel out" without doing the subtraction. The logs from
     // this car run 90 to 106.5 on the ECU's scale.
-    snprintf(text, sizeof(text), "%+.1f", s.egoCorrectionPct - 100.0f);
-    egoCorrection_.setText(text);
+    // Zero on the ECU's scale is not a trim anyone runs; it means the field
+    // is not being filled, which "-100" would misreport.
+    if (s.egoCorrectionPct >= 50.0f) {
+        snprintf(text, sizeof(text), "%+.1f", s.egoCorrectionPct - 100.0f);
+        egoCorrection_.setText(text);
+    } else {
+        egoCorrection_.setText("--");
+    }
     dutyCycle_.setInt(static_cast<int>(s.injDutyPct));
     map_.setInt(s.mapKpa);
     tps_.setInt(s.tpsPct);
