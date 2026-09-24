@@ -58,16 +58,17 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     updates_ = makeRow(left, 18 + kRowHeight * 2, "Updates");
     badFrames_ = makeRow(left, 18 + kRowHeight * 3, "Bad frames");
 
-    // What tripped, kept after the condition cleared. A dip that lasted half a
-    // corner is exactly what a live-only display loses.
-    makeHeading(left, 94, "LATCHED THIS RUN");
-    for (int i = 0; i < 3; ++i) {
-        lv_obj_t* row = lv_label_create(left);
-        setLabelText(row, "");
-        lv_obj_set_style_text_color(row, theme::dim(), 0);
-        lv_obj_align(row, LV_ALIGN_TOP_LEFT, 0, 112 + i * 14);
-        latched_[i] = row;
-    }
+    // Where the latched alarms were: the Alarms page keeps those, with times,
+    // and does it properly. A trigger that loses sync is the other fault
+    // nothing else on the dash can show, and one this car has logged - an
+    // unexpected missing tooth on 10 September.
+    makeHeading(left, 94, "TRIGGER");
+    sync_ = makeRow(left, 112, "Sync");
+    triggerErrors_ = makeRow(left, 112 + kRowHeight, "Errors");
+    lastTriggerError_ = lv_label_create(left);
+    setLabelText(lastTriggerError_, "");
+    lv_obj_set_style_text_color(lastTriggerError_, theme::dim(), 0);
+    lv_obj_align(lastTriggerError_, LV_ALIGN_TOP_RIGHT, 0, 112 + kRowHeight * 2);
 
     makeHeading(left, 162, "CEL FLAGS");
     cel_ = makeRow(left, 180, "Raw");
@@ -141,8 +142,9 @@ void DiagnosticScreen::update(const EngineDataModel& model,
                               const AlarmEngine& alarms,
                               const RunPeaks& peaks,
                               uint32_t nowMs) {
+    (void)alarms;   // the Alarms page is where alarms are read now
     const EngineSnapshot& s = model.snapshot();
-    char text[40];  // latched lines are the longest thing formatted here
+    char text[40];
 
     const LinkState link = model.linkState(nowMs);
     setLabelText(state_, toString(link));
@@ -176,30 +178,30 @@ void DiagnosticScreen::update(const EngineDataModel& model,
         lv_obj_set_style_text_color(celBits_[i], set ? theme::crit() : theme::dotOff(), 0);
     }
 
-    // Show the three most recent, newest last, and only redraw when the list
-    // actually grows.
-    const uint8_t count = alarms.latchedCount();
-    if (count != lastLatchedCount_) {
-        lastLatchedCount_ = count;
+    static const char* const kSync[] = {"NO SYNC", "SYNCING", "SYNCED"};
+    setLabelText(sync_, s.ignSyncStatus < 3 ? kSync[s.ignSyncStatus] : "?");
+    lv_color_t syncColor = theme::good();
+    if (s.ignSyncStatus != 2) {
+        // No sync with the engine turning is a fault; with it stopped it is
+        // simply what a stationary crank looks like.
+        syncColor = s.rpm >= kEngineRunningRpm ? theme::crit() : theme::dim();
+    }
+    lv_obj_set_style_text_color(sync_, syncColor, 0);
 
-        const uint8_t shown = count < 3 ? count : 3;
-        const uint8_t first = count - shown;
+    snprintf(text, sizeof(text), "%u", static_cast<unsigned>(peaks.triggerErrors));
+    setLabelText(triggerErrors_, text);
+    lv_obj_set_style_text_color(triggerErrors_,
+                                peaks.triggerErrors > 0 ? theme::warn() : theme::text(), 0);
 
-        for (int i = 0; i < 3; ++i) {
-            if (i >= shown) {
-                setLabelText(latched_[i], i == 0 ? "none" : "");
-                lv_obj_set_style_text_color(latched_[i], theme::dotOff(), 0);
-                continue;
-            }
-            const LatchedAlarm& hit = alarms.latched(static_cast<uint8_t>(first + i));
-            snprintf(text, sizeof(text), "%s %.*f %s @ %u",
-                     hit.label, hit.decimals, hit.value, hit.unit,
-                     static_cast<unsigned>(hit.rpm));
-            setLabelText(latched_[i], text);
-            lv_obj_set_style_text_color(
-                latched_[i],
-                hit.severity == AlarmSeverity::Critical ? theme::crit() : theme::warn(), 0);
+    if (peaks.triggerErrors == 0) {
+        setLabelText(lastTriggerError_, "");
+    } else {
+        uint8_t bit = 0;
+        while (bit < 8 && !((peaks.lastTriggerError >> bit) & 0x1)) {
+            ++bit;
         }
+        snprintf(text, sizeof(text), "last: %s", ignErrorBitName(bit));
+        setLabelText(lastTriggerError_, text);
     }
 
     if (!peaks.seeded) {

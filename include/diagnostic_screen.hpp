@@ -28,9 +28,12 @@ private:
     lv_obj_t* cel_ = nullptr;
     lv_obj_t* celBits_[11] = {};
 
-    // The three most recent alarms that tripped during this run.
-    lv_obj_t* latched_[3] = {};
-    uint8_t lastLatchedCount_ = 0xFF;
+    // Trigger health, where the latched alarms used to be. The Alarms page
+    // records those properly; nothing else on the dash says whether the ECU
+    // is keeping sync.
+    lv_obj_t* sync_ = nullptr;
+    lv_obj_t* triggerErrors_ = nullptr;
+    lv_obj_t* lastTriggerError_ = nullptr;
 
     // Peaks column.
     lv_obj_t* peakValues_[11] = {};

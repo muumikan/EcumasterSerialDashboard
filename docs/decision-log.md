@@ -616,9 +616,11 @@ implementation is the specification available.
   now retries three times 100 ms apart and reports which attempt worked, so a
   `card mounted on attempt 2` in the console is the signal that the fault is
   back. Vibration in the car is its own test of that contact.
-- **The Diag page's latched block is redundant.** The Alarms page supersedes
-  it and does it properly. Removing the block frees about 60 px of the left
-  column, which the link history would use well.
+- **The Diag page's latched block was redundant: closed on 2026-09-24.** The
+  Alarms page supersedes it. Its place now holds trigger health - the sync
+  state, and how many times this run the ECU's trigger error field went from
+  clear to set, with the last one named. This car logged an unexpected missing
+  tooth on 10 September, and nothing else on the dash could have shown it.
 - **The clock drifts and does not know about daylight saving.** The crystal is
   uncompensated, so expect one to three minutes a month, always slow. Every
   reflash resyncs it; twice a year it is an hour out until one happens.

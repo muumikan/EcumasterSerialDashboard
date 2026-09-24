@@ -11,7 +11,16 @@ const char* kCelBits[kCelBitCount] = {
     "EGT AL", "KNOCK", "FF SENS", "DBW", "FPR",
 };
 
+// Shortened from the 1.211 paramlist to fit a Diag row.
+const char* kIgnErrorBits[kIgnErrorBitCount] = {
+    "TOOTH RANGE", "MISSING TOOTH", "CAM SYNC", "FALSE SEC", "FALSE PRIM",
+};
+
 }  // namespace
+
+const char* ignErrorBitName(uint8_t bit) {
+    return bit < kIgnErrorBitCount ? kIgnErrorBits[bit] : "?";
+}
 
 const char* celBitName(uint8_t bit) {
     return bit < kCelBitCount ? kCelBits[bit] : "?";

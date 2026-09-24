@@ -26,6 +26,13 @@ struct RunPeaks {
     float injDutyPct = 0.0f;
     bool seeded = false;
 
+    // Trigger errors while running: how many times the error field went from
+    // clear to set, and what it said last. Edges rather than frames, so one
+    // error the ECU holds for a few frames counts once.
+    uint16_t triggerErrors = 0;
+    uint8_t lastTriggerError = 0;
+    bool triggerErrorActive = false;
+
     void record(const EngineSnapshot& s);
 };
 

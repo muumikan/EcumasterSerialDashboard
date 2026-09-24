@@ -57,6 +57,11 @@ struct EngineSnapshot {
     uint8_t  tablesSet = 0;           // active table set
     uint16_t celFlags = 0;            // check-engine bit field
 
+    // Trigger health. Sync is 0 no sync, 1 synchronising, 2 synchronised;
+    // the error is a bit field. Both paramlists are from the 1.211 definition.
+    uint8_t  ignSyncStatus = 0;
+    uint8_t  ignError = 0;
+
     // Idle and boost control. Both are closed loops inside the ECU, and what
     // these fields carry is the loop's own working state: where it is aiming,
     // what it is driving the valve to, and how hard it is correcting.
@@ -153,6 +158,11 @@ constexpr uint8_t kCelBitWbo = 3;
 inline bool celSet(uint16_t celFlags, uint8_t bit) {
     return (celFlags & (1u << bit)) != 0;
 }
+
+// Trigger error bits (paramlist "ignError", 1.211). Value 5 in that list is
+// 4 | 1 spelled out, which is what says the field is a bit field.
+constexpr uint8_t kIgnErrorBitCount = 5;
+const char* ignErrorBitName(uint8_t bit);   // "?" outside the documented range
 
 // Short name for a bit, or "?" if it is outside the documented range.
 const char* celBitName(uint8_t bit);

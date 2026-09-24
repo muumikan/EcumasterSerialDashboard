@@ -174,6 +174,8 @@ EngineSnapshot EdlSerialAdapter::read() const {
     s.ecuTempC = d.emuTemp;
     s.tablesSet = d.tablesSet;
     s.celFlags = d.cel;
+    s.ignSyncStatus = d.ignSyncStatus;
+    s.ignError = d.ignError;
 
     s.controlChannels = true;
 

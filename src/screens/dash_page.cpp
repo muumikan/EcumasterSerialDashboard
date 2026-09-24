@@ -7,6 +7,13 @@ void RunPeaks::record(const EngineSnapshot& s) {
         return;  // key-on values would poison every minimum
     }
 
+    const bool triggerError = s.ignError != 0;
+    if (triggerError && !triggerErrorActive) {
+        ++triggerErrors;
+        lastTriggerError = s.ignError;
+    }
+    triggerErrorActive = triggerError;
+
     if (!seeded) {
         seeded = true;
         oilPressureMinBar = s.oilPressureBar;
