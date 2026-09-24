@@ -40,7 +40,7 @@ void MainScreen::create(lv_obj_t* parent) {
     lv_obj_align(rpmCaption, LV_ALIGN_TOP_LEFT, 0, 0);
 
     rpmValue_ = lv_label_create(rpmBox);
-    lv_label_set_text(rpmValue_, "0");
+    setLabelText(rpmValue_, "0");
     lv_obj_set_style_text_font(rpmValue_, &lv_font_montserrat_48, 0);
     lv_obj_align(rpmValue_, LV_ALIGN_LEFT_MID, 0, 4);
 
@@ -64,7 +64,7 @@ void MainScreen::create(lv_obj_t* parent) {
     lv_obj_align(boostCaption, LV_ALIGN_TOP_LEFT, 0, 0);
 
     boostValue_ = lv_label_create(mapBox);
-    lv_label_set_text(boostValue_, "+0.00");
+    setLabelText(boostValue_, "+0.00");
     lv_obj_set_style_text_font(boostValue_, &lv_font_montserrat_36, 0);
     lv_obj_align(boostValue_, LV_ALIGN_TOP_LEFT, 0, 20);
 
@@ -102,14 +102,13 @@ void MainScreen::update(const EngineDataModel& model,
                         const AlarmEngine& alarms,
                         const RunPeaks& peaks,
                         uint32_t nowMs) {
-    (void)peaks;
     (void)nowMs;
     const EngineSnapshot& s = model.snapshot();
 
     char text[24];
 
     snprintf(text, sizeof(text), "%u", static_cast<unsigned>(s.rpm));
-    lv_label_set_text(rpmValue_, text);
+    setLabelText(rpmValue_, text);
 
     lv_coord_t rpmWidth = static_cast<lv_coord_t>((s.rpm / 7500.0f) * (kRpmBoxWidth - 24));
     if (rpmWidth < 0) rpmWidth = 0;
@@ -118,10 +117,10 @@ void MainScreen::update(const EngineDataModel& model,
 
     const float boost = boostBar(s);
     snprintf(text, sizeof(text), "%+.2f", boost);
-    lv_label_set_text(boostValue_, text);
+    setLabelText(boostValue_, text);
 
     snprintf(text, sizeof(text), "bar  MAP %u kPa", static_cast<unsigned>(s.mapKpa));
-    lv_label_set_text(mapLabel_, text);
+    setLabelText(mapLabel_, text);
 
     const lv_coord_t zero = barX(0.0f);
     const lv_coord_t now = barX(boost);
@@ -134,11 +133,15 @@ void MainScreen::update(const EngineDataModel& model,
     }
     lv_obj_set_style_bg_color(boostFill_, boost > 1.05f ? theme::warn() : theme::cyan(), 0);
 
-    if (alarms.engineRunning() && boost > boostPeak_) {
-        boostPeak_ = boost;
+    // From the run peaks, which see every frame, rather than from what this
+    // page happened to be painted with: a peak between two repaints is still
+    // the peak.
+    const float peak = peaks.seeded ? boostBar(peaks.mapKpa, peaks.baroKpa) : boostPeak_;
+    if (peak > boostPeak_) {
+        boostPeak_ = peak;
         lv_obj_set_pos(boostPeakMark_, barX(boostPeak_), 0);
         snprintf(text, sizeof(text), "Peak %+.2f bar", boostPeak_);
-        lv_label_set_text(boostPeakLabel_, text);
+        setLabelText(boostPeakLabel_, text);
     }
 
     clt_.setInt(s.cltC);
@@ -156,10 +159,10 @@ void MainScreen::update(const EngineDataModel& model,
 }
 
 bool MainScreen::showNoData() {
-    lv_label_set_text(rpmValue_, "--");
+    setLabelText(rpmValue_, "--");
     lv_obj_set_width(rpmBar_, 0);
-    lv_label_set_text(boostValue_, "--");
-    lv_label_set_text(mapLabel_, "bar  MAP -- kPa");
+    setLabelText(boostValue_, "--");
+    setLabelText(mapLabel_, "bar  MAP -- kPa");
     lv_obj_set_width(boostFill_, 0);
     // The peak mark and its label stay: they are this run's record, not a
     // live reading, and they are still true.

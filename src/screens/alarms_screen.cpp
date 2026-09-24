@@ -34,7 +34,7 @@ constexpr uint32_t kTickMs = 250;
 
 lv_obj_t* makeCell(lv_obj_t* parent, lv_coord_t x, const char* text) {
     lv_obj_t* label = lv_label_create(parent);
-    lv_label_set_text(label, text);
+    setLabelText(label, text);
     lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);
     lv_obj_set_style_text_color(label, theme::text(), 0);
     lv_obj_align(label, LV_ALIGN_TOP_LEFT, x, kTextTop);
@@ -127,7 +127,7 @@ void AlarmsScreen::buildRows() {
     }
 
     empty_ = lv_label_create(root_);
-    lv_label_set_text(empty_, "no events this run");
+    setLabelText(empty_, "no events this run");
     lv_obj_set_style_text_color(empty_, theme::dotOff(), 0);
     lv_obj_align(empty_, LV_ALIGN_TOP_LEFT, kTimeX, kHeaderHeight + kTextTop);
 }
@@ -156,7 +156,7 @@ void AlarmsScreen::buildFooter() {
     lv_obj_set_style_text_color(range_, theme::dim(), 0);
 
     since_ = lv_label_create(footer);
-    lv_label_set_text(since_, "");
+    setLabelText(since_, "");
     lv_obj_set_style_text_color(since_, theme::dotOff(), 0);
     lv_obj_align(since_, LV_ALIGN_TOP_RIGHT, -12, kTextTop);
 }
@@ -260,41 +260,41 @@ void AlarmsScreen::paint(const AlarmEngine& alarms, uint32_t nowMs) {
         const lv_color_t accent = event.active ? severityColor(event.severity) : theme::dim();
 
         formatHms(event.time, text, sizeof(text));
-        lv_label_set_text(row.time, text);
+        setLabelText(row.time, text);
         lv_obj_set_style_text_color(row.time, body, 0);
 
-        lv_label_set_text(row.label, event.label);
+        setLabelText(row.label, event.label);
         lv_obj_set_style_text_color(row.label, accent, 0);
 
-        lv_label_set_text(row.value, event.value);
+        setLabelText(row.value, event.value);
         lv_obj_set_style_text_color(row.value, body, 0);
 
         snprintf(text, sizeof(text), "%u", static_cast<unsigned>(event.rpm));
-        lv_label_set_text(row.rpm, text);
+        setLabelText(row.rpm, text);
         lv_obj_set_style_text_color(row.rpm, body, 0);
 
         const uint32_t held = event.active ? nowMs - event.startMs
                                            : event.endMs - event.startMs;
         formatDuration(text, sizeof(text), held);
-        lv_label_set_text(row.duration, text);
+        setLabelText(row.duration, text);
         lv_obj_set_style_text_color(row.duration, theme::dim(), 0);
 
-        lv_label_set_text(row.state, event.active ? "ACT" : "RTN");
+        setLabelText(row.state, event.active ? "ACT" : "RTN");
         lv_obj_set_style_text_color(row.state, accent, 0);
     }
 
     const uint8_t active = log.activeCount();
     snprintf(text, sizeof(text), "%u", static_cast<unsigned>(active));
-    lv_label_set_text(activeCount_, text);
+    setLabelText(activeCount_, text);
     lv_obj_set_style_text_color(activeCount_, active > 0 ? theme::warn() : theme::text(), 0);
 
     snprintf(text, sizeof(text), "%lu", static_cast<unsigned long>(log.total()));
-    lv_label_set_text(totalCount_, text);
+    setLabelText(totalCount_, text);
 
     const uint32_t seconds = nowMs / 1000;
     snprintf(text, sizeof(text), "%u:%02u",
              static_cast<unsigned>(seconds / 60), static_cast<unsigned>(seconds % 60));
-    lv_label_set_text(runTime_, text);
+    setLabelText(runTime_, text);
 
     // Position and the arrows that say a swipe will do something. Blank when
     // the whole list is on screen, which is the usual case.
@@ -306,9 +306,9 @@ void AlarmsScreen::paint(const AlarmEngine& alarms, uint32_t nowMs) {
                  static_cast<unsigned>(scrollTop_ + shown),
                  static_cast<unsigned>(count),
                  scrollTop_ < maxTop ? LV_SYMBOL_DOWN : " ");
-        lv_label_set_text(range_, range);
+        setLabelText(range_, range);
     } else {
-        lv_label_set_text(range_, "");
+        setLabelText(range_, "");
     }
 
     if (log.runStart().valid) {
@@ -316,9 +316,9 @@ void AlarmsScreen::paint(const AlarmEngine& alarms, uint32_t nowMs) {
         formatHms(log.runStart(), stamp, sizeof(stamp));
         char line[24];
         snprintf(line, sizeof(line), "SINCE %s", stamp);
-        lv_label_set_text(since_, line);
+        setLabelText(since_, line);
     } else {
-        lv_label_set_text(since_, "NEWEST FIRST");
+        setLabelText(since_, "NEWEST FIRST");
     }
     lv_obj_align(since_, LV_ALIGN_TOP_RIGHT, -12, kTextTop);
 }

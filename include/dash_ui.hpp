@@ -28,6 +28,10 @@ constexpr uint32_t kSettingsSaveDelayMs = 4000;
 // Long enough to actually watch: at 900 ms it was over before you looked up.
 constexpr uint32_t kBootSweepMs = 2600;
 
+// Shortest time between two repaints of the page and the status bar: 20 Hz.
+// Faster than that the changing digits cannot be read anyway.
+constexpr uint32_t kPageRefreshMs = 50;
+
 // Owns the always-on chrome (shift lights, status bar) and page navigation.
 //
 // The pages below it only render; deciding what is shown happens here. Nothing
@@ -126,7 +130,10 @@ private:
     uint8_t litSegments_ = 0xFF;
     uint32_t bootSweepEndMs_ = 0;
     uint32_t lastRevision_ = UINT32_MAX;
-    LinkState lastLink_ = LinkState::Offline;
+    LinkState lastLink_ = LinkState::Offline;       // as the status bar shows it
+    LinkState evaluatedLink_ = LinkState::Offline;  // as the alarms last saw it
+    bool repaintPending_ = true;
+    uint32_t lastPaintMs_ = 0;
     AlarmSeverity lastWorst_ = AlarmSeverity::None;
     uint32_t lastEventTotal_ = UINT32_MAX;
     char clockShown_[6] = {0};

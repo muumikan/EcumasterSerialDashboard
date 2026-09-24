@@ -77,7 +77,7 @@ void TuneScreen::update(const EngineDataModel& model,
     } else {
         snprintf(text, sizeof(text), "tgt --");
     }
-    lv_label_set_text(targetLabel_, text);
+    setLabelText(targetLabel_, text);
 
     // No target, no deviation. Measuring against zero would hold the bar hard
     // over for the whole drive, which reads as a fault that is not there.
@@ -114,7 +114,7 @@ void TuneScreen::update(const EngineDataModel& model,
 
 bool TuneScreen::showNoData() {
     afr_.clear();
-    lv_label_set_text(targetLabel_, "tgt --");
+    setLabelText(targetLabel_, "tgt --");
     lv_obj_set_width(deviationFill_, 0);
 
     knock_.clear();

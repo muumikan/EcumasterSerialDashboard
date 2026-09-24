@@ -56,7 +56,7 @@ constexpr lv_coord_t kClockW = 42;
 // allowed to grow out of it.
 lv_obj_t* makeSlot(lv_obj_t* parent, lv_coord_t x, lv_coord_t w, lv_text_align_t align) {
     lv_obj_t* label = lv_label_create(parent);
-    lv_label_set_text(label, "");
+    setLabelText(label, "");
     lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);
     lv_obj_set_width(label, w);
     lv_obj_set_style_text_align(label, align, 0);
@@ -144,15 +144,15 @@ void DashUi::setServiceState(const ServiceApStatus& status) {
         return;
     }
     if (!serving) {
-        lv_label_set_text(apText_, "");
+        setLabelText(apText_, "");
         return;
     }
     if (clients > 0) {
         char text[16];
         snprintf(text, sizeof(text), LV_SYMBOL_WIFI " %u", clients);
-        lv_label_set_text(apText_, text);
+        setLabelText(apText_, text);
     } else {
-        lv_label_set_text(apText_, LV_SYMBOL_WIFI);
+        setLabelText(apText_, LV_SYMBOL_WIFI);
     }
     lv_obj_set_style_text_color(apText_, clients > 0 ? theme::good() : theme::cyan(), 0);
 }
@@ -196,7 +196,7 @@ void DashUi::buildChrome(lv_obj_t* screen) {
     }
 
     pageName_ = lv_label_create(status);
-    lv_label_set_text(pageName_, "DRIVE");
+    setLabelText(pageName_, "DRIVE");
     lv_obj_align(pageName_, LV_ALIGN_LEFT_MID, kPageNameX, 0);
 
     // Everything on this bar now sits in a slot of its own, given as a fixed
@@ -225,14 +225,14 @@ void DashUi::buildChrome(lv_obj_t* screen) {
     lv_obj_set_style_text_color(apText_, theme::cyan(), 0);
 
     linkText_ = makeSlot(status, kLinkX, kLinkW, LV_TEXT_ALIGN_RIGHT);
-    lv_label_set_text(linkText_, "OFFLINE");
+    setLabelText(linkText_, "OFFLINE");
     lv_obj_set_style_text_color(linkText_, theme::crit(), 0);
 
     // The car's own instrument cluster has no clock, so this is the only one
     // the driver gets. Minutes only: seconds would force a repaint every
     // second for something nobody reads to that precision.
     clockText_ = makeSlot(status, kClockX, kClockW, LV_TEXT_ALIGN_RIGHT);
-    lv_label_set_text(clockText_, "--:--");
+    setLabelText(clockText_, "--:--");
     lv_obj_set_style_text_color(clockText_, theme::dim(), 0);
 
     // ---- page area ------------------------------------------------------
@@ -260,12 +260,12 @@ void DashUi::buildSummary(lv_obj_t* screen) {
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 34);
 
     summaryHead_ = lv_label_create(summary_);
-    lv_label_set_text(summaryHead_, "");
+    setLabelText(summaryHead_, "");
     lv_obj_set_style_text_font(summaryHead_, &lv_font_montserrat_28, 0);
     lv_obj_align(summaryHead_, LV_ALIGN_TOP_MID, 0, 58);
 
     summaryBody_ = lv_label_create(summary_);
-    lv_label_set_text(summaryBody_, "");
+    setLabelText(summaryBody_, "");
     lv_obj_set_style_text_color(summaryBody_, theme::dim(), 0);
     lv_obj_align(summaryBody_, LV_ALIGN_TOP_MID, 0, 104);
 
@@ -303,7 +303,7 @@ void DashUi::updateSummary(LinkState link) {
     const float boost = boostBar(peaks_.mapKpa, peaks_.baroKpa);
     snprintf(text, sizeof(text), "%u rpm   %+.2f bar",
              static_cast<unsigned>(peaks_.rpm), boost);
-    lv_label_set_text(summaryHead_, text);
+    setLabelText(summaryHead_, text);
 
     const uint8_t latched = alarms_.latchedCount();
     if (latched == 0) {
@@ -314,7 +314,7 @@ void DashUi::updateSummary(LinkState link) {
                  peaks_.oilPressureMinBar, static_cast<int>(peaks_.cltC),
                  static_cast<unsigned>(latched));
     }
-    lv_label_set_text(summaryBody_, text);
+    setLabelText(summaryBody_, text);
     lv_obj_set_style_text_color(summaryBody_, latched ? theme::warn() : theme::dim(), 0);
 
     lv_obj_clear_flag(summary_, LV_OBJ_FLAG_HIDDEN);
@@ -354,7 +354,7 @@ void DashUi::showPage(uint8_t index) {
 
     lv_obj_clear_flag(pages_[page_]->root(), LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_bg_color(dots_[page_], theme::cyan(), 0);
-    lv_label_set_text(pageName_, pages_[page_]->name());
+    setLabelText(pageName_, pages_[page_]->name());
 
     lastRevision_ = UINT32_MAX;  // force the new page to fill in immediately
 }
@@ -436,7 +436,7 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
     const LinkState link = model.linkState(nowMs);
     if (link != lastLink_) {
         lastLink_ = link;
-        lv_label_set_text(linkText_, toString(link));
+        setLabelText(linkText_, toString(link));
 
         lv_color_t color = theme::good();
         if (link == LinkState::Stale) color = theme::warn();
@@ -467,7 +467,7 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
             line = text;
         }
     }
-    lv_label_set_text(alarmText_, line);
+    setLabelText(alarmText_, line);
 
     // Counts events, not conditions: the badge is there to say "something
     // happened, go and look", and it has to keep saying so after the condition
@@ -476,11 +476,11 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
     if (events != lastEventTotal_) {
         lastEventTotal_ = events;
         if (events == 0) {
-            lv_label_set_text(latchBadge_, "");
+            setLabelText(latchBadge_, "");
         } else {
             char badge[8];
             snprintf(badge, sizeof(badge), "! %lu", static_cast<unsigned long>(events));
-            lv_label_set_text(latchBadge_, badge);
+            setLabelText(latchBadge_, badge);
         }
     }
 
@@ -488,7 +488,7 @@ void DashUi::updateStatusBar(const EngineDataModel& model, uint32_t nowMs) {
     formatHm(rtc_->now(), clock, sizeof(clock));
     if (strcmp(clock, clockShown_) != 0) {
         memcpy(clockShown_, clock, sizeof(clockShown_));
-        lv_label_set_text(clockText_, clockShown_);
+        setLabelText(clockText_, clockShown_);
         lv_obj_set_style_text_color(
             clockText_, rtc_->now().valid ? theme::text() : theme::dim(), 0);
     }
@@ -502,8 +502,9 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs, bool clockTick
     // Evaluated on a link change as well as on new data: losing the link is
     // exactly the case where no new data is coming, and it is an event the
     // list has to record.
-    if (changed || link != lastLink_) {
+    if (changed || link != evaluatedLink_) {
         lastRevision_ = model.revision();
+        evaluatedLink_ = link;
         alarms_.evaluate(model.snapshot(), link, rtc_->now(), nowMs);
         if (changed) {
             peaks_.record(model.snapshot());
@@ -520,6 +521,16 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs, bool clockTick
     // The clock tick is in the condition so the status bar and the alarm list's
     // running durations tick along even when the ECU has gone quiet.
     if (changed || lastLink_ != link || clockTicked) {
+        repaintPending_ = true;
+    }
+
+    // Painted at most every kPageRefreshMs, while the alarms above still see
+    // every frame. EDL-1 delivers a frame every ~22 ms; repainting on each one
+    // turned the last digit of every reading into a blur nobody could read,
+    // and spent the loop's time on SPI traffic the eye never saw.
+    if (repaintPending_ && nowMs - lastPaintMs_ >= kPageRefreshMs) {
+        repaintPending_ = false;
+        lastPaintMs_ = nowMs;
         updateStatusBar(model, nowMs);
         if (link != LinkState::Offline || !pages_[page_]->showNoData()) {
             pages_[page_]->update(model, alarms_, peaks_, nowMs);

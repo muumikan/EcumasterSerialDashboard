@@ -622,11 +622,12 @@ implementation is the specification available.
 - **The clock drifts and does not know about daylight saving.** The crystal is
   uncompensated, so expect one to three minutes a month, always slow. Every
   reflash resyncs it; twice a year it is an hour out until one happens.
-- **UI repaints at frame rate.** `DashUi` updates the visible page whenever the
-  model's revision changes, which at 19200 baud is a few hundred times a
-  second. LVGL coalesces the redraw, but the formatting work is done every
-  time. Rate-limiting to about 20 Hz would cut it by an order of magnitude and
-  make the digits readable rather than a blur.
+- **UI repainted at frame rate: closed on 2026-09-24.** The page and the
+  status bar are painted at most every 50 ms (`kPageRefreshMs`), and a label
+  is only written when its text changes (`setLabelText`), because LVGL
+  invalidates on every set whatever it is given. The alarms and the run peaks
+  still see every frame; the Drive page's boost peak is read from the peaks
+  for that reason.
 - **LVGL object pool headroom: closed, the hard way, on 2026-09-19.** This
   entry used to say the pool was "unmeasured, but no longer suspect", and that
   if a page ever came up blank or the dash restarted on the way to one, this

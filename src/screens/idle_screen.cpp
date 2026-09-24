@@ -89,7 +89,7 @@ void IdleScreen::update(const EngineDataModel& model,
         // Classic protocol: none of these channels exist. Showing the zeros
         // would read as a closed valve and a dead PID, which is a lie a
         // dash should not tell.
-        lv_label_set_text(targetLabel_, "tgt n/a");
+        setLabelText(targetLabel_, "tgt n/a");
         lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
         control_.setText("n/a");
         duty_.setText("--");
@@ -108,7 +108,7 @@ void IdleScreen::update(const EngineDataModel& model,
         snprintf(text, sizeof(text), "tgt --");
         lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
     }
-    lv_label_set_text(targetLabel_, text);
+    setLabelText(targetLabel_, text);
 
     control_.setText(s.idleControlActive ? "CLOSED" : "OPEN");
 
@@ -125,7 +125,7 @@ void IdleScreen::update(const EngineDataModel& model,
 
 bool IdleScreen::showNoData() {
     rpm_.clear();
-    lv_label_set_text(targetLabel_, "tgt --");
+    setLabelText(targetLabel_, "tgt --");
     lv_obj_set_width(rpmFill_, 0);
     lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
 

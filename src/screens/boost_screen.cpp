@@ -83,7 +83,7 @@ void BoostScreen::update(const EngineDataModel& model,
     lv_obj_set_width(mapFill_, barX(static_cast<float>(s.mapKpa)));
 
     if (!s.controlChannels) {
-        lv_label_set_text(targetLabel_, "tgt n/a");
+        setLabelText(targetLabel_, "tgt n/a");
         lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
         tableSet_.setText("n/a");
         duty_.setText("--");
@@ -101,7 +101,7 @@ void BoostScreen::update(const EngineDataModel& model,
         snprintf(text, sizeof(text), "tgt --");
         lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
     }
-    lv_label_set_text(targetLabel_, text);
+    setLabelText(targetLabel_, text);
 
     // Raw, the way the ECU numbers its sets. Renumbering it from one here
     // would only disagree with the Client on the laptop next to the car.
@@ -118,7 +118,7 @@ void BoostScreen::update(const EngineDataModel& model,
 
 bool BoostScreen::showNoData() {
     map_.clear();
-    lv_label_set_text(targetLabel_, "tgt --");
+    setLabelText(targetLabel_, "tgt --");
     lv_obj_set_width(mapFill_, 0);
     lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
 

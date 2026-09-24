@@ -30,7 +30,7 @@ lv_obj_t* makeRow(lv_obj_t* parent, lv_coord_t y, const char* caption) {
     lv_obj_align(left, LV_ALIGN_TOP_LEFT, 0, y);
 
     lv_obj_t* right = lv_label_create(parent);
-    lv_label_set_text(right, "--");
+    setLabelText(right, "--");
     lv_obj_set_style_text_color(right, theme::text(), 0);
     lv_obj_align(right, LV_ALIGN_TOP_RIGHT, 0, y);
     return right;
@@ -63,7 +63,7 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     makeHeading(left, 94, "LATCHED THIS RUN");
     for (int i = 0; i < 3; ++i) {
         lv_obj_t* row = lv_label_create(left);
-        lv_label_set_text(row, "");
+        setLabelText(row, "");
         lv_obj_set_style_text_color(row, theme::dim(), 0);
         lv_obj_align(row, LV_ALIGN_TOP_LEFT, 0, 112 + i * 14);
         latched_[i] = row;
@@ -74,7 +74,7 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
 
     for (int i = 0; i < 11; ++i) {
         lv_obj_t* bit = lv_label_create(left);
-        lv_label_set_text(bit, celBitName(static_cast<uint8_t>(i)));
+        setLabelText(bit, celBitName(static_cast<uint8_t>(i)));
         lv_obj_set_style_text_color(bit, theme::dotOff(), 0);
         lv_obj_align(bit, LV_ALIGN_TOP_LEFT, (i % 3) * 72, 200 + (i / 3) * 16);
         celBits_[i] = bit;
@@ -114,9 +114,9 @@ void DiagnosticScreen::setServiceState(const ServiceApStatus& status) {
     apClients_ = status.clients;
 
     if (!status.serving) {
-        lv_label_set_text(apNetwork_, "off");
+        setLabelText(apNetwork_, "off");
         lv_obj_set_style_text_color(apNetwork_, theme::dim(), 0);
-        lv_label_set_text(apKey_, status.password);
+        setLabelText(apKey_, status.password);
         lv_obj_set_style_text_color(apKey_, theme::dim(), 0);
         return;
     }
@@ -130,10 +130,10 @@ void DiagnosticScreen::setServiceState(const ServiceApStatus& status) {
     } else {
         snprintf(text, sizeof(text), "%s", status.ssid);
     }
-    lv_label_set_text(apNetwork_, text);
+    setLabelText(apNetwork_, text);
     lv_obj_set_style_text_color(apNetwork_, theme::good(), 0);
 
-    lv_label_set_text(apKey_, status.password);
+    setLabelText(apKey_, status.password);
     lv_obj_set_style_text_color(apKey_, theme::text(), 0);
 }
 
@@ -145,7 +145,7 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     char text[40];  // latched lines are the longest thing formatted here
 
     const LinkState link = model.linkState(nowMs);
-    lv_label_set_text(state_, toString(link));
+    setLabelText(state_, toString(link));
     lv_color_t linkColor = theme::good();
     if (link == LinkState::Stale) linkColor = theme::warn();
     if (link == LinkState::Offline) linkColor = theme::crit();
@@ -153,22 +153,22 @@ void DiagnosticScreen::update(const EngineDataModel& model,
 
     const uint32_t age = model.ageMs(nowMs);
     if (age == UINT32_MAX) {
-        lv_label_set_text(age_, "never");
+        setLabelText(age_, "never");
     } else {
         snprintf(text, sizeof(text), "%lu ms", static_cast<unsigned long>(age));
-        lv_label_set_text(age_, text);
+        setLabelText(age_, text);
     }
 
     snprintf(text, sizeof(text), "%lu", static_cast<unsigned long>(model.updateCount()));
-    lv_label_set_text(updates_, text);
+    setLabelText(updates_, text);
 
     const uint32_t bad = model.badFrames();
     snprintf(text, sizeof(text), "%lu", static_cast<unsigned long>(bad));
-    lv_label_set_text(badFrames_, text);
+    setLabelText(badFrames_, text);
     lv_obj_set_style_text_color(badFrames_, bad > 0 ? theme::warn() : theme::text(), 0);
 
     snprintf(text, sizeof(text), "0x%04X", static_cast<unsigned>(s.celFlags));
-    lv_label_set_text(cel_, text);
+    setLabelText(cel_, text);
     lv_obj_set_style_text_color(cel_, s.celFlags != 0 ? theme::crit() : theme::text(), 0);
 
     for (int i = 0; i < 11; ++i) {
@@ -187,7 +187,7 @@ void DiagnosticScreen::update(const EngineDataModel& model,
 
         for (int i = 0; i < 3; ++i) {
             if (i >= shown) {
-                lv_label_set_text(latched_[i], i == 0 ? "none" : "");
+                setLabelText(latched_[i], i == 0 ? "none" : "");
                 lv_obj_set_style_text_color(latched_[i], theme::dotOff(), 0);
                 continue;
             }
@@ -195,7 +195,7 @@ void DiagnosticScreen::update(const EngineDataModel& model,
             snprintf(text, sizeof(text), "%s %.*f %s @ %u",
                      hit.label, hit.decimals, hit.value, hit.unit,
                      static_cast<unsigned>(hit.rpm));
-            lv_label_set_text(latched_[i], text);
+            setLabelText(latched_[i], text);
             lv_obj_set_style_text_color(
                 latched_[i],
                 hit.severity == AlarmSeverity::Critical ? theme::crit() : theme::warn(), 0);
@@ -204,33 +204,33 @@ void DiagnosticScreen::update(const EngineDataModel& model,
 
     if (!peaks.seeded) {
         for (int i = 0; i < 11; ++i) {
-            lv_label_set_text(peakValues_[i], "--");
+            setLabelText(peakValues_[i], "--");
         }
         return;
     }
 
     snprintf(text, sizeof(text), "%u", static_cast<unsigned>(peaks.rpm));
-    lv_label_set_text(peakValues_[0], text);
+    setLabelText(peakValues_[0], text);
     snprintf(text, sizeof(text), "%u kPa", static_cast<unsigned>(peaks.mapKpa));
-    lv_label_set_text(peakValues_[1], text);
+    setLabelText(peakValues_[1], text);
     snprintf(text, sizeof(text), "%d C", static_cast<int>(peaks.cltC));
-    lv_label_set_text(peakValues_[2], text);
+    setLabelText(peakValues_[2], text);
     snprintf(text, sizeof(text), "%d C", static_cast<int>(peaks.iatC));
-    lv_label_set_text(peakValues_[3], text);
+    setLabelText(peakValues_[3], text);
     snprintf(text, sizeof(text), "%.1f bar", peaks.oilPressureMaxBar);
-    lv_label_set_text(peakValues_[4], text);
+    setLabelText(peakValues_[4], text);
     snprintf(text, sizeof(text), "%.1f bar", peaks.oilPressureMinBar);
-    lv_label_set_text(peakValues_[5], text);
+    setLabelText(peakValues_[5], text);
     snprintf(text, sizeof(text), "%.1f bar", peaks.fuelPressureMaxBar);
-    lv_label_set_text(peakValues_[6], text);
+    setLabelText(peakValues_[6], text);
     snprintf(text, sizeof(text), "%.1f bar", peaks.fuelPressureMinBar);
-    lv_label_set_text(peakValues_[7], text);
+    setLabelText(peakValues_[7], text);
     snprintf(text, sizeof(text), "%.2f", peaks.lambdaMin);
-    lv_label_set_text(peakValues_[8], text);
+    setLabelText(peakValues_[8], text);
     snprintf(text, sizeof(text), "%.1f V", peaks.knockLevelV);
-    lv_label_set_text(peakValues_[9], text);
+    setLabelText(peakValues_[9], text);
     snprintf(text, sizeof(text), "%d %%", static_cast<int>(peaks.injDutyPct));
-    lv_label_set_text(peakValues_[10], text);
+    setLabelText(peakValues_[10], text);
 }
 
 }  // namespace ecu

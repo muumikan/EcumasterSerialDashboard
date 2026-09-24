@@ -1,6 +1,7 @@
 #include "ui_tile.hpp"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "dash_theme.hpp"
 
@@ -18,9 +19,17 @@ lv_obj_t* makePanel(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, 
     return panel;
 }
 
+void setLabelText(lv_obj_t* label, const char* text) {
+    const char* current = lv_label_get_text(label);
+    if (current != nullptr && strcmp(current, text) == 0) {
+        return;
+    }
+    lv_label_set_text(label, text);
+}
+
 lv_obj_t* makeCaption(lv_obj_t* parent, const char* text) {
     lv_obj_t* label = lv_label_create(parent);
-    lv_label_set_text(label, text);
+    setLabelText(label, text);
     lv_obj_set_style_text_color(label, theme::dim(), 0);
     return label;
 }
@@ -62,7 +71,7 @@ void Tile::create(lv_obj_t* parent,
     // Lifted off the bottom edge. Digits have no descenders, so a label
     // flush with the edge reads as if it were about to fall out of the cell.
     value_ = lv_label_create(root_);
-    lv_label_set_text(value_, "--");
+    setLabelText(value_, "--");
     lv_obj_set_style_text_font(value_, valueFont, 0);
     lv_obj_set_style_text_color(value_, theme::text(), 0);
     lv_obj_align(value_, LV_ALIGN_BOTTOM_LEFT, 0, -4);
@@ -71,17 +80,17 @@ void Tile::create(lv_obj_t* parent,
 void Tile::setInt(int value) {
     char text[16];
     snprintf(text, sizeof(text), "%d", value);
-    lv_label_set_text(value_, text);
+    setLabelText(value_, text);
 }
 
 void Tile::setFloat(float value, int decimals) {
     char text[16];
     snprintf(text, sizeof(text), "%.*f", decimals, value);
-    lv_label_set_text(value_, text);
+    setLabelText(value_, text);
 }
 
 void Tile::setText(const char* text) {
-    lv_label_set_text(value_, text);
+    setLabelText(value_, text);
 }
 
 void Tile::clear() {

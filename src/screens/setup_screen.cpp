@@ -108,7 +108,7 @@ void SetupScreen::buildCategories() {
         categoryItems_[i] = item;
 
         lv_obj_t* label = lv_label_create(item);
-        lv_label_set_text(label, kSetupCategories[i].name);
+        setLabelText(label, kSetupCategories[i].name);
         lv_obj_align(label, LV_ALIGN_LEFT_MID, 12, 0);
         categoryLabels_[i] = label;
 
@@ -148,7 +148,7 @@ void SetupScreen::buildRows() {
         lv_obj_align(row.name, LV_ALIGN_LEFT_MID, 10, 0);
 
         row.value = lv_label_create(row.root);
-        lv_label_set_text(row.value, "");
+        setLabelText(row.value, "");
         lv_obj_align(row.value, LV_ALIGN_LEFT_MID, 150, 0);
 
         row.unit = makeCaption(row.root, "");
@@ -171,7 +171,7 @@ void SetupScreen::buildRows() {
             lv_obj_add_event_cb(button, stepCb, LV_EVENT_CLICKED, this);
 
             lv_obj_t* glyph = lv_label_create(button);
-            lv_label_set_text(glyph, direction < 0 ? "-" : "+");
+            setLabelText(glyph, direction < 0 ? "-" : "+");
             lv_obj_center(glyph);
 
             if (direction < 0) {
@@ -189,7 +189,7 @@ void SetupScreen::buildRows() {
         lv_obj_add_event_cb(row.pill, stepCb, LV_EVENT_CLICKED, this);
 
         row.pillText = lv_label_create(row.pill);
-        lv_label_set_text(row.pillText, "");
+        setLabelText(row.pillText, "");
         lv_obj_center(row.pillText);
 
         lv_obj_add_flag(row.root, LV_OBJ_FLAG_HIDDEN);
@@ -223,7 +223,7 @@ void SetupScreen::paintRow(uint8_t row) {
         return;
     }
     setHidden(widgets.root, false);
-    lv_label_set_text(widgets.name, item->name);
+    setLabelText(widgets.name, item->name);
 
     const float value = readSetting(*settings_, *item);
     const bool isBool = item->type == SetupType::Bool;
@@ -236,7 +236,7 @@ void SetupScreen::paintRow(uint8_t row) {
 
     if (isBool) {
         const bool on = value > 0.5f;
-        lv_label_set_text(widgets.pillText, on ? "ON" : "OFF");
+        setLabelText(widgets.pillText, on ? "ON" : "OFF");
         lv_obj_set_style_text_color(widgets.pillText, on ? theme::good() : theme::dim(), 0);
         lv_obj_set_style_border_color(widgets.pill, on ? theme::good() : theme::line(), 0);
         return;
@@ -244,8 +244,8 @@ void SetupScreen::paintRow(uint8_t row) {
 
     char buffer[16];
     snprintf(buffer, sizeof(buffer), "%.*f", item->decimals, value);
-    lv_label_set_text(widgets.value, buffer);
-    lv_label_set_text(widgets.unit, item->unit);
+    setLabelText(widgets.value, buffer);
+    setLabelText(widgets.unit, item->unit);
 }
 
 void SetupScreen::paintRows() {
@@ -269,9 +269,9 @@ void SetupScreen::paintRows() {
                  static_cast<unsigned>(last < count ? last : count),
                  static_cast<unsigned>(count),
                  scrollTop_ < maxTop ? LV_SYMBOL_DOWN : " ");
-        lv_label_set_text(positionLabel_, text);
+        setLabelText(positionLabel_, text);
     } else {
-        lv_label_set_text(positionLabel_, "");
+        setLabelText(positionLabel_, "");
     }
     lv_obj_align(positionLabel_, LV_ALIGN_CENTER, 0, 0);
 }
@@ -363,7 +363,7 @@ void SetupScreen::update(const EngineDataModel& model,
         return;
     }
     lastRunning_ = running;
-    lv_label_set_text(stateLabel_, running ? "ENGINE RUNNING" : "ENGINE OFF");
+    setLabelText(stateLabel_, running ? "ENGINE RUNNING" : "ENGINE OFF");
 }
 
 }  // namespace ecu

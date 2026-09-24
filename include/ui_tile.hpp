@@ -42,4 +42,9 @@ private:
 lv_obj_t* makePanel(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h);
 lv_obj_t* makeCaption(lv_obj_t* parent, const char* text);
 
+// lv_label_set_text, but only when the text actually changes. LVGL copies and
+// invalidates on every call whatever it is given, so a page refreshed at frame
+// rate was repainting every digit on it whether or not any of them moved.
+void setLabelText(lv_obj_t* label, const char* text);
+
 }  // namespace ecu
