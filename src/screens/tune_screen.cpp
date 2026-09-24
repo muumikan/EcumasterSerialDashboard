@@ -112,4 +112,19 @@ void TuneScreen::update(const EngineDataModel& model,
     dutyCycle_.setSeverity(alarms.severity(AlarmId::InjectorDuty));
 }
 
+bool TuneScreen::showNoData() {
+    afr_.clear();
+    lv_label_set_text(targetLabel_, "tgt --");
+    lv_obj_set_width(deviationFill_, 0);
+
+    knock_.clear();
+    ignition_.clear();
+    pulseWidth_.clear();
+    dutyCycle_.clear();
+    map_.clear();
+    tps_.clear();
+    rpm_.clear();
+    return true;
+}
+
 }  // namespace ecu

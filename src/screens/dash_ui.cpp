@@ -521,7 +521,9 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs, bool clockTick
     // running durations tick along even when the ECU has gone quiet.
     if (changed || lastLink_ != link || clockTicked) {
         updateStatusBar(model, nowMs);
-        pages_[page_]->update(model, alarms_, peaks_, nowMs);
+        if (link != LinkState::Offline || !pages_[page_]->showNoData()) {
+            pages_[page_]->update(model, alarms_, peaks_, nowMs);
+        }
     }
 }
 

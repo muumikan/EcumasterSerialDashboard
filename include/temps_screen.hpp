@@ -14,6 +14,7 @@ public:
                 const RunPeaks& peaks,
                 uint32_t nowMs) override;
     const char* name() const override { return "TEMPS & PRESS"; }
+    bool showNoData() override;
 
 private:
     Tile clt_;

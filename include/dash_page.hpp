@@ -41,6 +41,14 @@ public:
 
     virtual const char* name() const = 0;
 
+    // Called in place of update() while the link is offline. A page that
+    // shows live readings blanks them and returns true: the snapshot is the
+    // last frame the ECU sent before it went quiet, and a frozen oil pressure
+    // reads exactly like a real one. Pages that are not live readings - the
+    // alarm list, the diagnostics, setup - keep the default and go on being
+    // updated, because what they show is still true.
+    virtual bool showNoData() { return false; }
+
     // A page's chance to use a swipe before it turns the page. Return true to
     // say the gesture was consumed. Pages that fit on the screen - which is
     // all of them but the alarm list - want the default.

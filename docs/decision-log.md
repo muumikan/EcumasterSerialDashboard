@@ -645,9 +645,10 @@ implementation is the specification available.
   custom font subset would fix all of this at once - and would give the
   three-across pages more than the 36 px they read at now, since a condensed
   face at 44 px would fit the same 144 px cell.
-- **Alarm state freezes when the link drops.** Evaluation now runs on a link
-  state change as well as on new data - it has to, or a lost link would never
-  be recorded as an event - but it re-evaluates the same stale snapshot, so
-  the last known severities persist while the status bar reads `OFFLINE`.
-  Deliberate for now; clearing them on `Offline` is a small change in
-  `DashUi::update`.
+- **Alarm state froze when the link dropped: closed on 2026-09-24.** The
+  alarm engine asked `rpm > 500` of a snapshot that freezes at key-off, so it
+  stayed armed over the last frame: the status bar named a stale reading
+  instead of `ENGINE OFF` and its cells stayed red. It now asks the question
+  `engineStopped()` asks - rpm and a live link - so a dead link drops every
+  severity and closes the open events. The live pages show `--` while the link
+  is offline rather than the frozen values; the alarm list keeps its record.

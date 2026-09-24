@@ -84,6 +84,11 @@ void Tile::setText(const char* text) {
     lv_label_set_text(value_, text);
 }
 
+void Tile::clear() {
+    setText("--");
+    setSeverity(AlarmSeverity::None);
+}
+
 void Tile::setSeverity(AlarmSeverity severity) {
     if (severity == severity_) {
         return;  // restyling every frame would thrash LVGL's invalidation

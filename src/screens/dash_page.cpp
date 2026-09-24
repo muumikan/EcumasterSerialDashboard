@@ -3,7 +3,7 @@
 namespace ecu {
 
 void RunPeaks::record(const EngineSnapshot& s) {
-    if (s.rpm <= kEngineRunningRpm) {
+    if (s.rpm < kEngineRunningRpm) {
         return;  // key-on values would poison every minimum
     }
 

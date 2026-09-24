@@ -18,6 +18,7 @@ public:
                 const RunPeaks& peaks,
                 uint32_t nowMs) override;
     const char* name() const override { return "BOOST"; }
+    bool showNoData() override;
 
 private:
     Tile map_;

@@ -22,6 +22,10 @@ public:
     void setText(const char* text);
     void setSeverity(AlarmSeverity severity);
 
+    // No reading: "--", and no alarm colour. What a cell shows when there is
+    // nothing current to put in it, rather than the last value it was given.
+    void clear();
+
     lv_obj_t* root() const { return root_; }
     lv_obj_t* value() const { return value_; }
 

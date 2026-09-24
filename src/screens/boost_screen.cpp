@@ -116,4 +116,20 @@ void BoostScreen::update(const EngineDataModel& model,
     errorCorrection_.setText(text);
 }
 
+bool BoostScreen::showNoData() {
+    map_.clear();
+    lv_label_set_text(targetLabel_, "tgt --");
+    lv_obj_set_width(mapFill_, 0);
+    lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
+
+    tableSet_.clear();
+    duty_.clear();
+    pidCorrection_.clear();
+    errorCorrection_.clear();
+    rpm_.clear();
+    tps_.clear();
+    afr_.clear();
+    return true;
+}
+
 }  // namespace ecu

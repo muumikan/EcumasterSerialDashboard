@@ -123,4 +123,20 @@ void IdleScreen::update(const EngineDataModel& model,
     angleCorrection_.setText(text);
 }
 
+bool IdleScreen::showNoData() {
+    rpm_.clear();
+    lv_label_set_text(targetLabel_, "tgt --");
+    lv_obj_set_width(rpmFill_, 0);
+    lv_obj_add_flag(targetMark_, LV_OBJ_FLAG_HIDDEN);
+
+    control_.clear();
+    duty_.clear();
+    pidCorrection_.clear();
+    afr_.clear();
+    ignition_.clear();
+    angleCorrection_.clear();
+    map_.clear();
+    return true;
+}
+
 }  // namespace ecu

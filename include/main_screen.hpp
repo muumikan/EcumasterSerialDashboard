@@ -14,6 +14,7 @@ public:
                 const RunPeaks& peaks,
                 uint32_t nowMs) override;
     const char* name() const override { return "DRIVE"; }
+    bool showNoData() override;
 
 private:
     lv_obj_t* rpmValue_ = nullptr;

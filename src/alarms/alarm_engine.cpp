@@ -90,7 +90,13 @@ void AlarmEngine::evaluate(const EngineSnapshot& s,
                            uint32_t nowMs) {
     events_.stampRunStart(wall);
 
-    running_ = s.rpm > kEngineRunningRpm;
+    // The same question engineStopped() answers, asked the same way. Killing
+    // the ignition cuts the ECU's power, so the last frame freezes in the
+    // snapshot - often above 500 rpm - and an rpm test alone kept the alarms
+    // armed over it: the status bar went on naming a frozen reading instead
+    // of saying ENGINE OFF, and its cells stayed red. A dead link is a stopped
+    // engine, so every severity drops and the open events close.
+    running_ = s.rpm >= kEngineRunningRpm && link != LinkState::Offline;
 
     if (running_ && !wasRunning_) {
         runningSinceMs_ = nowMs;

@@ -14,6 +14,7 @@ public:
                 const RunPeaks& peaks,
                 uint32_t nowMs) override;
     const char* name() const override { return "TUNE"; }
+    bool showNoData() override;
 
 private:
     Tile afr_;

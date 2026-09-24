@@ -41,4 +41,14 @@ void TempsScreen::update(const EngineDataModel& model,
     fuel_.setSeverity(alarms.severity(AlarmId::FuelPressure));
 }
 
+bool TempsScreen::showNoData() {
+    clt_.clear();
+    iat_.clear();
+    ecuTemp_.clear();
+    oil_.clear();
+    fuel_.clear();
+    deltaFpr_.clear();
+    return true;
+}
+
 }  // namespace ecu

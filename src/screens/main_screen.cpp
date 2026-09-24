@@ -155,4 +155,20 @@ void MainScreen::update(const EngineDataModel& model,
     battery_.setSeverity(low > high ? low : high);
 }
 
+bool MainScreen::showNoData() {
+    lv_label_set_text(rpmValue_, "--");
+    lv_obj_set_width(rpmBar_, 0);
+    lv_label_set_text(boostValue_, "--");
+    lv_label_set_text(mapLabel_, "bar  MAP -- kPa");
+    lv_obj_set_width(boostFill_, 0);
+    // The peak mark and its label stay: they are this run's record, not a
+    // live reading, and they are still true.
+
+    clt_.clear();
+    oil_.clear();
+    lambda_.clear();
+    battery_.clear();
+    return true;
+}
+
 }  // namespace ecu
