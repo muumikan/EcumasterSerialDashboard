@@ -171,6 +171,14 @@ void MainScreen::update(const EngineDataModel& model,
     const AlarmSeverity low = alarms.severity(AlarmId::BatteryLow);
     const AlarmSeverity high = alarms.severity(AlarmId::BatteryHigh);
     battery_.setSeverity(low > high ? low : high);
+
+    // Last, so a failed sensor overrides whatever its reading would have said.
+    if (celSet(s.celFlags, kCelBitClt)) clt_.showFault();
+    if (celSet(s.celFlags, kCelBitWbo)) lambda_.showFault();
+    if (celSet(s.celFlags, kCelBitMap)) {
+        setLabelText(boostValue_, "ERR");
+        lv_obj_set_style_text_color(boostValue_, theme::crit(), 0);
+    }
 }
 
 bool MainScreen::showNoData() {

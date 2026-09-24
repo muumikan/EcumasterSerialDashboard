@@ -187,6 +187,18 @@ void AlarmEngine::evaluate(const EngineSnapshot& s,
         }
     }
 
+    // The ECU's own fault word reaches the status bar too, below every limit
+    // alarm: it used to show only as a count on the badge, so a failed sensor
+    // went unnamed on the one line every page shows.
+    if (worst_ == AlarmSeverity::None && running_ && s.celFlags != 0) {
+        uint8_t bit = 0;
+        while (!celSet(s.celFlags, bit)) {
+            ++bit;
+        }
+        worst_ = AlarmSeverity::Warning;
+        snprintf(worstText_, sizeof(worstText_), "CEL %s", celBitName(bit));
+    }
+
     recordCel(s, wall, nowMs);
     recordLink(link, s, wall, nowMs);
 }

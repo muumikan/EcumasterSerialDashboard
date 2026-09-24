@@ -79,6 +79,8 @@ void BoostScreen::update(const EngineDataModel& model,
     rpm_.setInt(s.rpm);
     tps_.setInt(s.tpsPct);
     showMixture(afr_, s, mixtureAfr_);
+    if (celSet(s.celFlags, kCelBitWbo)) afr_.showFault();
+    if (celSet(s.celFlags, kCelBitMap)) map_.showFault();
 
     lv_obj_set_width(mapFill_, barX(static_cast<float>(s.mapKpa)));
 

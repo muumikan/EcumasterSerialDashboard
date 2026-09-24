@@ -141,6 +141,18 @@ const char* toString(LinkState state);
 // sensor and IAT should be the flag that lights.
 constexpr uint8_t kCelBitCount = 11;
 
+// The bits for sensors a cell on the dashboard reads. With one of them set the
+// ECU has declared that sensor failed and is running on its fallback value, so
+// the number in the snapshot is plausible and wrong - which is worse than none.
+constexpr uint8_t kCelBitClt = 0;
+constexpr uint8_t kCelBitIat = 1;
+constexpr uint8_t kCelBitMap = 2;
+constexpr uint8_t kCelBitWbo = 3;
+
+inline bool celSet(uint16_t celFlags, uint8_t bit) {
+    return (celFlags & (1u << bit)) != 0;
+}
+
 // Short name for a bit, or "?" if it is outside the documented range.
 const char* celBitName(uint8_t bit);
 

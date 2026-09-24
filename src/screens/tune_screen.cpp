@@ -119,6 +119,9 @@ void TuneScreen::update(const EngineDataModel& model,
     afr_.setSeverity(alarms.severity(AlarmId::Lean));
     knock_.setSeverity(alarms.severity(AlarmId::Knock));
     dutyCycle_.setSeverity(alarms.severity(AlarmId::InjectorDuty));
+
+    if (celSet(s.celFlags, kCelBitWbo)) afr_.showFault();
+    if (celSet(s.celFlags, kCelBitMap)) map_.showFault();
 }
 
 bool TuneScreen::showNoData() {

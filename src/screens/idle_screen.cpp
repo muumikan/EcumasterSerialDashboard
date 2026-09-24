@@ -82,6 +82,8 @@ void IdleScreen::update(const EngineDataModel& model,
     showMixture(afr_, s, mixtureAfr_);
     ignition_.setFloat(s.ignAngleDeg, 1);
     map_.setInt(s.mapKpa);
+    if (celSet(s.celFlags, kCelBitWbo)) afr_.showFault();
+    if (celSet(s.celFlags, kCelBitMap)) map_.showFault();
 
     lv_obj_set_width(rpmFill_, barX(static_cast<float>(s.rpm)));
 

@@ -39,6 +39,9 @@ void TempsScreen::update(const EngineDataModel& model,
     iat_.setSeverity(alarms.severity(AlarmId::IntakeAir));
     oil_.setSeverity(alarms.severity(AlarmId::OilPressure));
     fuel_.setSeverity(alarms.severity(AlarmId::FuelPressure));
+
+    if (celSet(s.celFlags, kCelBitClt)) clt_.showFault();
+    if (celSet(s.celFlags, kCelBitIat)) iat_.showFault();
 }
 
 bool TempsScreen::showNoData() {
