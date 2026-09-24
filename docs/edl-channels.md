@@ -9,9 +9,12 @@ The classic serial protocol carries 34 channels, one per 5-byte frame. The
 EDL-1 stream carries 195 in a single 260-byte frame, so everything below
 arrives from the same instant as everything else.
 
-**Nothing here is displayed yet.** The adapter maps the same values the classic
-one did, so the dashboard behaves identically; this is the menu, not the meal.
-`EdlSerialAdapter::frame()` exposes the whole frame for whatever gets picked.
+When this list was generated nothing in it was displayed: the adapter mapped
+the same values the classic one did. Since then the **Idle** and **Boost**
+groups' control state has been mapped onto the model and has pages of its own,
+so the counts below are from before that. Everything else here is still the
+menu, not the meal. `EdlSerialAdapter::frame()` exposes the whole frame for
+whatever gets picked.
 
 Groups this car has no hardware for - VVT, DBW, Nitrous, ALS, TC, Flex Fuel,
 VSS - are listed for completeness and are noise on this engine.

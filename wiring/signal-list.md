@@ -82,15 +82,18 @@ is never attached to the UART at all.
 - **Charge-pump capacitors.** The MAX3232 generates its ±RS-232 rails
   internally and needs four external capacitors (typically 100 nF) on C1±,
   C2±, V+ and V−. Ready-made modules already have them; a bare chip does not.
-- **Enable the stream in the ECU.** The EMU Classic Client has to have the
-  *ECUMASTER serial protocol* switched on, then the change made permanent
-  ("Make permanent" on the toolbar). Without it the port stays quiet.
+- **Enable the stream in the ECU.** The ECU has to be configured to send the
+  EDL-1 logger stream, and the change made permanent ("Make permanent" on the
+  EMU Classic Client toolbar). Without it the port stays quiet. The older
+  *ECUMASTER serial protocol* at 19200 baud is what this list was first
+  written for; the firmware no longer reads it.
 
 ### Link parameters
 
 | | |
 |---|---|
-| Baud | 19200 |
+| Protocol | EDL-1 logger stream, 260-byte frames |
+| Baud | 115200 (`board::kEcuBaudEdl`) |
 | Framing | 8N1 |
 | Direction | ECU → dash. The dash never transmits. |
 | Dash RX | GPIO18 (UART1-OUT connector RX) |
