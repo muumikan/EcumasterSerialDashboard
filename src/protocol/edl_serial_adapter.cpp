@@ -121,9 +121,12 @@ uint32_t EdlSerialAdapter::poll() {
 }
 
 EngineSnapshot EdlSerialAdapter::read() const {
-    // Value-initialised so padding bytes are zeroed - the model compares
-    // snapshots with memcmp to detect real changes.
-    EngineSnapshot s{};
+    // Cleared byte for byte, padding included - the model compares snapshots
+    // with memcmp to detect real changes. `EngineSnapshot s{}` does not promise
+    // that: the struct has member initialisers, so braces are aggregate
+    // initialisation and the padding keeps whatever was on the stack.
+    EngineSnapshot s;
+    memset(static_cast<void*>(&s), 0, sizeof(s));
     const EDLFrame& d = lastGood_;
 
     s.rpm = d.RPM;
