@@ -85,6 +85,22 @@ struct EngineSnapshot {
 // service page - and only one of them is an alarm.
 constexpr uint16_t kEngineRunningRpm = 500;
 
+// Boost as gauge pressure in bar: manifold pressure above the ambient the ECU
+// measured, not above a fixed 100 kPa. Weather alone moves the air pressure
+// by several kPa, which a fixed reference shows as boost that is not there.
+//
+// The EMU's baro sensor is internal and always fitted, but a reading outside
+// anything weather produces means the field is not being filled, so that
+// falls back to standard atmosphere rather than skewing every reading.
+inline float boostBar(uint16_t mapKpa, uint8_t baroKpa) {
+    const float ambient = (baroKpa >= 80 && baroKpa <= 110) ? baroKpa : 101.3f;
+    return (static_cast<float>(mapKpa) - ambient) / 100.0f;
+}
+
+inline float boostBar(const EngineSnapshot& s) {
+    return boostBar(s.mapKpa, s.baroKpa);
+}
+
 // Health of the ECU -> dashboard link, derived from frame arrival timing.
 enum class LinkState : uint8_t {
     Offline,  // nothing received (yet), or the link has dropped

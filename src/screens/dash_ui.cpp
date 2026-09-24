@@ -300,7 +300,7 @@ void DashUi::updateSummary(LinkState link) {
     engineWasRunning_ = false;
 
     char text[48];
-    const float boost = (static_cast<float>(peaks_.mapKpa) - 100.0f) / 100.0f;
+    const float boost = boostBar(peaks_.mapKpa, peaks_.baroKpa);
     snprintf(text, sizeof(text), "%u rpm   %+.2f bar",
              static_cast<unsigned>(peaks_.rpm), boost);
     lv_label_set_text(summaryHead_, text);

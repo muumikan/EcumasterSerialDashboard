@@ -13,6 +13,7 @@ namespace ecu {
 struct RunPeaks {
     uint16_t rpm = 0;
     uint16_t mapKpa = 0;
+    uint8_t baroKpa = 0;   // ambient at the moment of mapKpa, for boostBar()
     int16_t cltC = 0;
     int8_t iatC = 0;
     float oilPressureMinBar = 0.0f;

@@ -116,7 +116,7 @@ void MainScreen::update(const EngineDataModel& model,
     if (rpmWidth > kRpmBoxWidth - 24) rpmWidth = kRpmBoxWidth - 24;
     lv_obj_set_width(rpmBar_, rpmWidth);
 
-    const float boost = (static_cast<float>(s.mapKpa) - 100.0f) / 100.0f;
+    const float boost = boostBar(s);
     snprintf(text, sizeof(text), "%+.2f", boost);
     lv_label_set_text(boostValue_, text);
 

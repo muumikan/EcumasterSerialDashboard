@@ -17,7 +17,10 @@ void RunPeaks::record(const EngineSnapshot& s) {
     }
 
     if (s.rpm > rpm) rpm = s.rpm;
-    if (s.mapKpa > mapKpa) mapKpa = s.mapKpa;
+    if (s.mapKpa > mapKpa) {
+        mapKpa = s.mapKpa;
+        baroKpa = s.baroKpa;
+    }
     if (s.cltC > cltC) cltC = s.cltC;
     if (s.iatC > iatC) iatC = s.iatC;
     if (s.oilPressureBar < oilPressureMinBar) oilPressureMinBar = s.oilPressureBar;
