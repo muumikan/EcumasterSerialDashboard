@@ -52,7 +52,10 @@ void TuneScreen::create(lv_obj_t* parent) {
     knock_.create(root_, kCol * 2, 0, kCol, kRow, "KNOCK", "x noise", &lv_font_montserrat_36);
 
     ignition_.create(root_, 0, kRow, kCol, kRow, "IGN", "BTDC", &lv_font_montserrat_36);
-    pulseWidth_.create(root_, kCol, kRow, kCol, kRow, "INJ PW", "ms", &lv_font_montserrat_36);
+    // The closed-loop fuel trim, in place of injector pulse width: the duty
+    // cell beside it already says how hard the injectors are working, while
+    // this is the one number that says whether the fuel map is right.
+    egoCorrection_.create(root_, kCol, kRow, kCol, kRow, "EGO CORR", "%", &lv_font_montserrat_36);
     dutyCycle_.create(root_, kCol * 2, kRow, kCol, kRow, "INJ DC", "%", &lv_font_montserrat_36);
 
     map_.create(root_, 0, kRow * 2, kCol, kRow, "MAP", "kPa", &lv_font_montserrat_36);
@@ -108,7 +111,11 @@ void TuneScreen::update(const EngineDataModel& model,
         knock_.setText("--");   // no threshold sent, nothing to measure against
     }
     ignition_.setFloat(s.ignAngleDeg, 1);
-    pulseWidth_.setFloat(s.injPulseWidthMs, 1);
+    // Shown as the trim itself rather than the ECU's 100-based figure: -6
+    // reads as "taking fuel out" without doing the subtraction. The logs from
+    // this car run 90 to 106.5 on the ECU's scale.
+    snprintf(text, sizeof(text), "%+.1f", s.egoCorrectionPct - 100.0f);
+    egoCorrection_.setText(text);
     dutyCycle_.setInt(static_cast<int>(s.injDutyPct));
     map_.setInt(s.mapKpa);
     tps_.setInt(s.tpsPct);
@@ -131,7 +138,7 @@ bool TuneScreen::showNoData() {
 
     knock_.clear();
     ignition_.clear();
-    pulseWidth_.clear();
+    egoCorrection_.clear();
     dutyCycle_.clear();
     map_.clear();
     tps_.clear();

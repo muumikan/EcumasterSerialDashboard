@@ -142,6 +142,7 @@ EngineSnapshot EdlSerialAdapter::read() const {
     s.injPulseWidth2Ms = d.scondarypulseWidth;  // sic, spelling from the library
     s.injDutyPct = d.injDC;
     s.dwellTimeMs = d.dwellTime;
+    s.egoCorrectionPct = d.egoCorrection;
 
     s.wboLambda = d.wboLambda;
     s.wboAfr = d.wboAFR;

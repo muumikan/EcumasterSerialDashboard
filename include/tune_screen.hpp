@@ -24,7 +24,7 @@ private:
 
     Tile knock_;
     Tile ignition_;
-    Tile pulseWidth_;
+    Tile egoCorrection_;
     Tile dutyCycle_;
     Tile map_;
     Tile tps_;

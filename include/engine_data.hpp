@@ -24,6 +24,7 @@ struct EngineSnapshot {
     float    injPulseWidth2Ms = 0.0f; // ms (secondary injectors)
     float    injDutyPct = 0.0f;       // %
     float    dwellTimeMs = 0.0f;      // ms
+    float    egoCorrectionPct = 0.0f; // %, closed-loop fuel trim; 100 = none
 
     float    wboLambda = 0.0f;        // lambda
     float    wboAfr = 0.0f;           // AFR
