@@ -42,6 +42,10 @@ private:
     // already done the work of deciding where a frame begins.
     EmuLog log_;
     EcuLinkAdapter adapter_;
+
+    // Frames the adapter had accepted at the last pass. The model is fed on a
+    // change in this, not on bytes arriving: see loop().
+    uint32_t framesSeen_ = 0;
 };
 
 }  // namespace ecu

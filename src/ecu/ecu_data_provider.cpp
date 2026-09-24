@@ -31,7 +31,7 @@ void EcuDataProvider::begin(uint32_t baud, int8_t rxPin, int8_t txPin) {
 // print() or any other transmitting method on it.
 
 void EcuDataProvider::loop(uint32_t nowMs) {
-    const uint32_t consumed = adapter_.poll();
+    adapter_.poll();
 
     // Flush regardless, so a paused stream still commits what was buffered.
     log_.loop(nowMs);
@@ -40,9 +40,15 @@ void EcuDataProvider::loop(uint32_t nowMs) {
     // produces no snapshot, which is exactly the case worth counting.
     model_.noteBadFrames(adapter_.badFrames());
 
-    if (consumed == 0) {
-        return;  // nothing arrived; leave the model's timestamps alone
+    // Fed on accepted frames, not on bytes. Bytes arriving proves only that
+    // something is on the wire: noise, a wrong baud rate or a stream of
+    // spliced frames all deliver bytes and no data, and counting them kept the
+    // link ONLINE over a snapshot that was not being refreshed at all.
+    const uint32_t frames = adapter_.framesDecoded();
+    if (frames == framesSeen_) {
+        return;  // nothing new; leave the model's timestamps alone
     }
+    framesSeen_ = frames;
 
     model_.applySnapshot(adapter_.read(), nowMs);
 }
