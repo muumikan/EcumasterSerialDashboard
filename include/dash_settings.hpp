@@ -22,6 +22,10 @@ struct DashSettings {
     uint8_t nightBrightnessPct;  // used while night mode is on
     bool nightMode;
 
+    // Mixture as AFR rather than lambda, on every page that shows it. The
+    // alarm limits stay in lambda whichever is chosen.
+    bool mixtureAfr;
+
     bool bootSweep;
     bool logging;
 

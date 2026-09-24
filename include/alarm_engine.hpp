@@ -19,6 +19,9 @@ enum class AlarmId : uint8_t {
     InjectorDuty,
     FuelPressure,
     IntakeAir,
+    // Last in the enum so the slots above keep their places in a stored
+    // record; its priority comes from its position in the rule table.
+    Overboost,
     Count,
 };
 

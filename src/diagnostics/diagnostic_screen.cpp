@@ -227,7 +227,7 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     setLabelText(peakValues_[7], text);
     snprintf(text, sizeof(text), "%.2f", peaks.lambdaMin);
     setLabelText(peakValues_[8], text);
-    snprintf(text, sizeof(text), "%.1f V", peaks.knockLevelV);
+    snprintf(text, sizeof(text), "%.2f x", peaks.knockRatio);
     setLabelText(peakValues_[9], text);
     snprintf(text, sizeof(text), "%d %%", static_cast<int>(peaks.injDutyPct));
     setLabelText(peakValues_[10], text);

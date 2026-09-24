@@ -25,6 +25,7 @@ const SetupItem kAlarmItems[] = {
     { "Inj DC",     "",  SetupType::Bool, LIMIT_OFFSET(InjectorDuty, enabled),   0, 0, 1, 0 },
     { "Fuel P",     "",  SetupType::Bool, LIMIT_OFFSET(FuelPressure, enabled),   0, 0, 1, 0 },
     { "IAT",        "",  SetupType::Bool, LIMIT_OFFSET(IntakeAir, enabled),      0, 0, 1, 0 },
+    { "Overboost",  "",  SetupType::Bool, LIMIT_OFFSET(Overboost, enabled),      0, 0, 1, 0 },
 };
 
 const SetupItem kLimitItems[] = {
@@ -38,14 +39,18 @@ const SetupItem kLimitItems[] = {
     { "Batt crit",    "V",   SetupType::Float, LIMIT_OFFSET(BatteryLow, crit),   0.1f, 9.0f, 14.5f, 1 },
     { "Charge warn",  "V",   SetupType::Float, LIMIT_OFFSET(BatteryHigh, warn),  0.1f, 13.0f, 18.0f, 1 },
     { "Charge crit",  "V",   SetupType::Float, LIMIT_OFFSET(BatteryHigh, crit),  0.1f, 13.0f, 18.0f, 1 },
-    { "Knock warn",   "V",   SetupType::Float, LIMIT_OFFSET(Knock, warn),        0.1f, 0.2f, 5.0f, 1 },
-    { "Knock crit",   "V",   SetupType::Float, LIMIT_OFFSET(Knock, crit),        0.1f, 0.2f, 5.0f, 1 },
+    // Knock over the ECU's noise threshold, as a ratio: 1.00 is where the ECU
+    // itself counts knock.
+    { "Knock warn",   "x",   SetupType::Float, LIMIT_OFFSET(Knock, warn),        0.05f, 0.3f, 3.0f, 2 },
+    { "Knock crit",   "x",   SetupType::Float, LIMIT_OFFSET(Knock, crit),        0.05f, 0.3f, 3.0f, 2 },
     { "Inj DC warn",  "%",   SetupType::Float, LIMIT_OFFSET(InjectorDuty, warn), 1.0f, 40,   100,  0 },
     { "Inj DC crit",  "%",   SetupType::Float, LIMIT_OFFSET(InjectorDuty, crit), 1.0f, 40,   100,  0 },
     { "Fuel P warn",  "bar", SetupType::Float, LIMIT_OFFSET(FuelPressure, warn), 0.1f, 1.0f, 8.0f, 1 },
     { "Fuel P crit",  "bar", SetupType::Float, LIMIT_OFFSET(FuelPressure, crit), 0.1f, 1.0f, 8.0f, 1 },
     { "IAT warn",     "C",   SetupType::Float, LIMIT_OFFSET(IntakeAir, warn),    1.0f, 30,   130,  0 },
     { "IAT crit",     "C",   SetupType::Float, LIMIT_OFFSET(IntakeAir, crit),    1.0f, 30,   130,  0 },
+    { "Boost warn",   "bar", SetupType::Float, LIMIT_OFFSET(Overboost, warn),    0.05f, 0.2f, 2.0f, 2 },
+    { "Boost crit",   "bar", SetupType::Float, LIMIT_OFFSET(Overboost, crit),    0.05f, 0.2f, 2.0f, 2 },
 };
 
 const SetupItem kShiftItems[] = {
@@ -58,6 +63,7 @@ const SetupItem kDisplayItems[] = {
     { "Brightness",  "%", SetupType::U8,   FIELD_OFFSET(brightnessPct),      5, 10, 100, 0 },
     { "Night mode",  "",  SetupType::Bool, FIELD_OFFSET(nightMode),          0, 0, 1, 0 },
     { "Night level", "%", SetupType::U8,   FIELD_OFFSET(nightBrightnessPct), 5, 5,  100, 0 },
+    { "Mixture AFR", "",  SetupType::Bool, FIELD_OFFSET(mixtureAfr),         0, 0, 1, 0 },
     { "Boot sweep",  "",  SetupType::Bool, FIELD_OFFSET(bootSweep),          0, 0, 1, 0 },
 };
 

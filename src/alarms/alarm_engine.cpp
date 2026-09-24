@@ -23,27 +23,42 @@ float oilPressure(const EngineSnapshot& s) { return s.oilPressureBar; }
 float coolant(const EngineSnapshot& s) { return static_cast<float>(s.cltC); }
 float lambda(const EngineSnapshot& s) { return s.wboLambda; }
 float battery(const EngineSnapshot& s) { return s.batteryV; }
-float knock(const EngineSnapshot& s) { return s.knockLevelV; }
+float knock(const EngineSnapshot& s) { return knockRatio(s); }
 float injectorDuty(const EngineSnapshot& s) { return s.injDutyPct; }
 float fuelPressure(const EngineSnapshot& s) { return s.fuelPressureBar; }
 float intakeAir(const EngineSnapshot& s) { return static_cast<float>(s.iatC); }
+float boost(const EngineSnapshot& s) { return boostBar(s); }
+
+// Without a noise threshold there is nothing to measure knock against.
+bool knockSensed(const EngineSnapshot& s) { return s.engineNoiseV >= kMinEngineNoiseV; }
 
 // Cruise runs lean on purpose; only a lean mixture under boost is a fault.
 bool underBoost(const EngineSnapshot& s) { return s.mapKpa > 140; }
 
 // Order is priority order: when several alarms share a severity, the first one
 // here is the one the status bar names. Oil pressure outranks intake air.
-const AlarmRule kRules[kAlarmCount] = {
+const AlarmRule kRules[] = {
     { AlarmId::OilPressure,  "OIL P",  "bar", -1, 1, oilPressure,  nullptr },
     { AlarmId::Coolant,      "CLT",    "C",   +1, 0, coolant,      nullptr },
+    // Against a fixed ceiling, not against the ECU's boost target: this car's
+    // boost control is not driving the solenoid (boostDC is zero in every log),
+    // so the target is a table value and nothing is holding boost to it.
+    { AlarmId::Overboost,    "BOOST",  "bar", +1, 2, boost,        nullptr },
     { AlarmId::Lean,         "LEAN",   "",    +1, 2, lambda,       underBoost },
     { AlarmId::BatteryLow,   "BATT",   "V",   -1, 1, battery,      nullptr },
     { AlarmId::BatteryHigh,  "CHARGE", "V",   +1, 1, battery,      nullptr },
-    { AlarmId::Knock,        "KNOCK",  "V",   +1, 1, knock,        nullptr },
+    // A ratio to the ECU's noise threshold; see knockRatio().
+    { AlarmId::Knock,        "KNOCK",  "",    +1, 2, knock,        knockSensed },
     { AlarmId::InjectorDuty, "INJ DC", "%",   +1, 0, injectorDuty, nullptr },
     { AlarmId::FuelPressure, "FUEL P", "bar", -1, 1, fuelPressure, nullptr },
     { AlarmId::IntakeAir,    "IAT",    "C",   +1, 0, intakeAir,    nullptr },
 };
+
+// One rule per slot. Sized by its initialisers rather than by kAlarmCount, so
+// a rule forgotten for a new AlarmId fails the build instead of leaving a
+// zeroed entry whose value function is null.
+static_assert(sizeof(kRules) / sizeof(kRules[0]) == kAlarmCount,
+              "every AlarmId needs exactly one rule");
 
 // True while the value is on the wrong side of the limit. `active` widens the
 // limit by the deadband, so an alarm that has tripped holds until the value has
@@ -69,13 +84,18 @@ AlarmSettings defaultAlarmSettings() {
     // from the setup page when there is a reason to watch it.
     s.limits[static_cast<uint8_t>(AlarmId::BatteryLow)]   = { 13.2f, 12.4f, false };
     s.limits[static_cast<uint8_t>(AlarmId::BatteryHigh)]  = { 15.0f, 15.5f, true };
-    s.limits[static_cast<uint8_t>(AlarmId::Knock)]        = { 1.2f,  2.0f,  true };
+    // Crit at 1.0, the ratio at which the ECU itself counts knock; warn well
+    // clear of the 0.44 that normal running never exceeded on this car.
+    s.limits[static_cast<uint8_t>(AlarmId::Knock)]        = { 0.7f,  1.0f,  true };
     s.limits[static_cast<uint8_t>(AlarmId::InjectorDuty)] = { 85.0f, 92.0f, true };
     // Off by default for the same reason, plus one of its own: which Analog In
     // carries fuel pressure is still unconfirmed on this car, so the channel
     // may not be measuring what the threshold assumes.
     s.limits[static_cast<uint8_t>(AlarmId::FuelPressure)] = { 2.2f,  1.9f,  false };
     s.limits[static_cast<uint8_t>(AlarmId::IntakeAir)]    = { 65.0f, 75.0f, true };
+    // Gauge bar. Starting points like the rest: no log from this car has been
+    // under boost yet, so nothing here was measured.
+    s.limits[static_cast<uint8_t>(AlarmId::Overboost)]    = { 0.7f,  0.9f,  true };
 
     // Six seconds, not three: on this engine oil pressure had not finished
     // building by three, so the delay was still cutting it fine.

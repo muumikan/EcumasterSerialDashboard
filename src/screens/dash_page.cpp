@@ -28,7 +28,8 @@ void RunPeaks::record(const EngineSnapshot& s) {
     if (s.fuelPressureBar < fuelPressureMinBar) fuelPressureMinBar = s.fuelPressureBar;
     if (s.fuelPressureBar > fuelPressureMaxBar) fuelPressureMaxBar = s.fuelPressureBar;
     if (s.wboLambda < lambdaMin) lambdaMin = s.wboLambda;
-    if (s.knockLevelV > knockLevelV) knockLevelV = s.knockLevelV;
+    const float knock = ecu::knockRatio(s);
+    if (knock > knockRatio) knockRatio = knock;
     if (s.injDutyPct > injDutyPct) injDutyPct = s.injDutyPct;
 }
 

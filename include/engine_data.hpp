@@ -32,7 +32,9 @@ struct EngineSnapshot {
 
     uint16_t egt1C = 0;               // degC
     uint16_t egt2C = 0;               // degC
-    float    knockLevelV = 0.0f;      // V
+    float    knockLevelV = 0.0f;      // V, above the noise threshold only
+    float    knockValueV = 0.0f;      // V, raw sensor
+    float    engineNoiseV = 0.0f;     // V, the ECU's noise threshold
 
     float    oilPressureBar = 0.0f;   // bar
     uint8_t  oilTempC = 0;            // degC
@@ -100,6 +102,23 @@ inline float boostBar(uint16_t mapKpa, uint8_t baroKpa) {
 inline float boostBar(const EngineSnapshot& s) {
     return boostBar(s.mapKpa, s.baroKpa);
 }
+
+// Knock as a share of the ECU's own noise threshold: 1.0 is where the ECU
+// itself starts counting knock. Measured on this car across ~11 000 running
+// samples: the ratio sits around 0.2 and stays under 0.44 in 99.9 % of them,
+// and every knock event the ECU flagged was at 1.09 or above. That matches
+// knockLevel, which is exactly knockValue minus engineNoise, floored at zero.
+//
+// Zero when the threshold is not being sent, rather than a division by it.
+constexpr float kMinEngineNoiseV = 0.1f;
+
+inline float knockRatio(const EngineSnapshot& s) {
+    return s.engineNoiseV >= kMinEngineNoiseV ? s.knockValueV / s.engineNoiseV : 0.0f;
+}
+
+// Stoichiometric AFR the ECU converts with. Read off this car's logs rather
+// than assumed: wboAFR is 14.7 wherever wboLambda is 1.000.
+constexpr float kStoichAfr = 14.7f;
 
 // Health of the ECU -> dashboard link, derived from frame arrival timing.
 enum class LinkState : uint8_t {

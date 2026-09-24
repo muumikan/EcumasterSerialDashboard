@@ -21,7 +21,7 @@ struct RunPeaks {
     float fuelPressureMinBar = 0.0f;
     float fuelPressureMaxBar = 0.0f;
     float lambdaMin = 0.0f;
-    float knockLevelV = 0.0f;
+    float knockRatio = 0.0f;   // knockRatio(), not volts
     float injDutyPct = 0.0f;
     bool seeded = false;
 

@@ -151,6 +151,8 @@ EngineSnapshot EdlSerialAdapter::read() const {
     s.egt1C = d.Egt1;
     s.egt2C = d.Egt2;
     s.knockLevelV = d.knockLevel;
+    s.knockValueV = d.knockValue;
+    s.engineNoiseV = d.engineNoise;
 
     s.oilPressureBar = d.oilPressure;
     s.oilTempC = d.oilTemperature;
