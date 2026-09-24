@@ -64,11 +64,9 @@ void DiagnosticScreen::create(lv_obj_t* parent) {
     // unexpected missing tooth on 10 September.
     makeHeading(left, 94, "TRIGGER");
     sync_ = makeRow(left, 112, "Sync");
+    // The count and the last error share a row: a third line ran into the
+    // CEL heading below.
     triggerErrors_ = makeRow(left, 112 + kRowHeight, "Errors");
-    lastTriggerError_ = lv_label_create(left);
-    setLabelText(lastTriggerError_, "");
-    lv_obj_set_style_text_color(lastTriggerError_, theme::dim(), 0);
-    lv_obj_align(lastTriggerError_, LV_ALIGN_TOP_RIGHT, 0, 112 + kRowHeight * 2);
 
     makeHeading(left, 162, "CEL FLAGS");
     cel_ = makeRow(left, 180, "Raw");
@@ -188,21 +186,19 @@ void DiagnosticScreen::update(const EngineDataModel& model,
     }
     lv_obj_set_style_text_color(sync_, syncColor, 0);
 
-    snprintf(text, sizeof(text), "%u", static_cast<unsigned>(peaks.triggerErrors));
-    setLabelText(triggerErrors_, text);
-    lv_obj_set_style_text_color(triggerErrors_,
-                                peaks.triggerErrors > 0 ? theme::warn() : theme::text(), 0);
-
     if (peaks.triggerErrors == 0) {
-        setLabelText(lastTriggerError_, "");
+        setLabelText(triggerErrors_, "0");
     } else {
         uint8_t bit = 0;
         while (bit < 8 && !((peaks.lastTriggerError >> bit) & 0x1)) {
             ++bit;
         }
-        snprintf(text, sizeof(text), "last: %s", ignErrorBitName(bit));
-        setLabelText(lastTriggerError_, text);
+        snprintf(text, sizeof(text), "%u  %s", static_cast<unsigned>(peaks.triggerErrors),
+                 ignErrorBitName(bit));
+        setLabelText(triggerErrors_, text);
     }
+    lv_obj_set_style_text_color(triggerErrors_,
+                                peaks.triggerErrors > 0 ? theme::warn() : theme::text(), 0);
 
     if (!peaks.seeded) {
         for (int i = 0; i < 11; ++i) {

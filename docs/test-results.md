@@ -5,6 +5,37 @@ entry that only says "worked" is worth very little later.
 
 ---
 
+## 2026-09-24 — review changes, not yet on the car
+
+Built, not run. Everything below changed on the bench and needs the car.
+
+- **Key off with the engine running.** The status bar should read
+  `ENGINE OFF`, no cell should stay red, and the live pages should read `--`.
+  Before, the frozen last frame kept the alarms armed.
+- **Link with garbage on it.** A wrong baud rate or noise on RX must stay
+  `OFFLINE`; it used to read `ONLINE` on bytes alone. Diag's Updates now
+  counts frames.
+- **Boost at rest.** Engine stopped, key on: Drive should read about +0.00
+  bar. It used to read +0.02/+0.03 from a fixed 100 kPa reference.
+- **Settings migration.** The first boot on this build prints `settings:
+  migrated from version 4`, and brightness, shift points and limits must be
+  what they were. Only the knock limits reset (0.70 / 1.00).
+- **IAT connector off.** The IAT cell should read `ERR`, the status bar
+  `CEL IAT`. This also confirms the CEL bit order, which is still inferred.
+- **Knock ratio.** Tune's KNOCK should idle around 0.2. Compare against
+  knockValue / engineNoise in the log.
+- **Overboost.** Lower Setup > Limits > Boost warn below the car's boost and
+  confirm Drive's boost bar and number turn amber. No log from this car has
+  been under boost yet, so 0.7 / 0.9 bar are starting points only.
+- **Mixture AFR.** Toggle Setup > Display > Mixture AFR: Drive, Tune, Idle and
+  Boost should all switch unit and caption.
+- **Diag trigger.** Sync should read `SYNCED` running; errors should stay 0 on
+  a clean run.
+- **Second start of the day.** Peaks on Diag and the run summary should start
+  from zero on each engine start, not carry the last drive over.
+
+---
+
 ## 2026-09-19 — second service-page session, three defects
 
 Observed by using the dashboard, all three fixed in this session. The logs page

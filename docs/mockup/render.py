@@ -156,8 +156,8 @@ def drive_page(rpm, rpm_fill, boost, mapkpa, boost_fill, clt, oil, lam, batt, oi
        label(302,12,"BOOST",14,CAPTION),
        label(302,32,boost,36,TEXT),
        label(302,76,f"bar&nbsp; MAP {mapkpa} kPa",14,DIM),
-       bar(302,94,162,10,min(74,74+boost_fill),abs(boost_fill),CYAN,marks=((74,1,DIM),(132,2,WARN))),
-       label(302,114,"Peak +1.06 bar",14,DIM),
+       bar(302,94,162,10,min(74,74+boost_fill),abs(boost_fill),CYAN,marks=((74,1,DIM),(124,2,WARN))),
+       label(302,114,"Peak +0.68 bar",14,DIM),
        tile(0,156,120,130,"CLT","C",clt,36),
        tile(120,156,120,130,"OIL P","bar",oil,36,sev=oil_sev),
        tile(240,156,120,130,"LAMBDA","",lam,36),
@@ -166,7 +166,7 @@ def drive_page(rpm, rpm_fill, boost, mapkpa, boost_fill, clt, oil, lam, batt, oi
 
 boards["Drive.dc.html"]=doc("DRIVE",
     "".join(chrome(("DRIVE",0), latch="! 2", clock="14:32", lit=7))
-    + drive_page("3450",150,"+0.84","184",50,"96","4.1","0.88","14.2"))
+    + drive_page("3450",150,"+0.62","164",46,"96","4.1","0.82","14.2"))
 
 boards["Parked.dc.html"]=doc("PARKED",
     "".join(chrome(("DRIVE",0), link=("OFFLINE",CRIT), alarm="ENGINE OFF",
@@ -174,13 +174,12 @@ boards["Parked.dc.html"]=doc("PARKED",
     + drive_page("0",0,"+0.00","100",0,"88","0.0","1.00","12.4",oil_sev="crit"))
 
 # ---------------- TUNE --------------------------------------------------
-p=[hero(0,0,"AFR / TARGET","","14.2","tgt 14.7",(144,-30,WARN),((144,1,DIM),))]
-p[0]=hero(0,0,"AFR / TARGET","","14.2","tgt 14.7",(114,30,GOOD),((144,1,DIM),))
-p.append(tile(COL*2,0,COL,ROW,"KNOCK","V","1.2",36))
+p=[hero(0,0,"LAMBDA / TARGET","","0.82","tgt 0.80",(144,24,GOOD),((144,1,DIM),))]
+p.append(tile(COL*2,0,COL,ROW,"KNOCK","x noise","0.24",36))
 p.append(tile(0,ROW,COL,ROW,"IGN","BTDC","18.5",36))
-p.append(tile(COL,ROW,COL,ROW,"INJ PW","ms","8.4",36))
+p.append(tile(COL,ROW,COL,ROW,"EGO CORR","%","-2.5",36))
 p.append(tile(COL*2,ROW,COL,ROW,"INJ DC","%","46",36))
-p.append(tile(0,ROW*2,COL,ROW,"MAP","kPa","184",36))
+p.append(tile(0,ROW*2,COL,ROW,"MAP","kPa","164",36))
 p.append(tile(COL,ROW*2,COL,ROW,"TPS","%","82",36))
 p.append(tile(COL*2,ROW*2,COL,ROW,"RPM","rpm","3450",36))
 boards["Tune.dc.html"]=doc("TUNE",
@@ -202,7 +201,7 @@ p=[hero(0,0,"RPM / IDLE TGT","","850","tgt 900",(0,96,GOOD),((104,2,CYAN),)),
    tile(COL*2,0,COL,ROW,"IDLE CTL","","CLOSED",28),
    tile(0,ROW,COL,ROW,"IDLE DC","%","38",36),
    tile(COL,ROW,COL,ROW,"IDLE PID","%","+2",36),
-   tile(COL*2,ROW,COL,ROW,"AFR","","14.2",36),
+   tile(COL*2,ROW,COL,ROW,"LAMBDA","","0.97",36),
    tile(0,ROW*2,COL,ROW,"IGN","BTDC","12.5",36),
    tile(COL,ROW*2,COL,ROW,"IDLE IGN","deg","+3.0",36),
    tile(COL*2,ROW*2,COL,ROW,"MAP","kPa","32",36)]
@@ -210,16 +209,16 @@ boards["Main.dc.html"]=doc("IDLE",
     "".join(chrome(("IDLE",3), clock="14:35", lit=1)) + page_wrap(p))
 
 # ---------------- BOOST -------------------------------------------------
-p=[hero(0,0,"MAP / BOOST TGT","kPa","224","tgt 220",(0,224,GOOD),((220,2,CYAN),)),
+p=[hero(0,0,"MAP / BOOST TGT","kPa","164","tgt 160",(0,215,GOOD),((209,2,CYAN),)),
    tile(COL*2,0,COL,ROW,"BOOST SET","","1",36),
    tile(0,ROW,COL,ROW,"BOOST DC","%","62",36),
    tile(COL,ROW,COL,ROW,"BOOST PID","%","+4",36),
    tile(COL*2,ROW,COL,ROW,"ERR COR","%","-1",36),
    tile(0,ROW*2,COL,ROW,"RPM","rpm","5820",36),
    tile(COL,ROW*2,COL,ROW,"TPS","%","100",36),
-   tile(COL*2,ROW*2,COL,ROW,"AFR","","11.8",36)]
+   tile(COL*2,ROW*2,COL,ROW,"LAMBDA","","0.80",36)]
 boards["Boost.dc.html"]=doc("BOOST",
-    "".join(chrome(("BOOST",4), alarm="KNOCK 2.4 V", alarm_color=WARN,
+    "".join(chrome(("BOOST",4), alarm="KNOCK 1.05", alarm_color=WARN,
                    latch="! 1", clock="14:41", lit=13)) + page_wrap(p))
 
 # ---------------- ALARMS ------------------------------------------------
@@ -229,7 +228,7 @@ cols=[(12,"TIME",None),(90,"SOURCE",None),(172,"VALUE",None),
 p=[frame(0,0,480,HDR,f"background: {BG}; border-bottom: 1px solid {LINE};")
    + "".join(label(x,TT,t,14,CAPTION,w=w,align="right" if w else "left") for x,t,w in cols)
    + "</div>"]
-events=[("14:41:02","KNOCK","2.4 V","5820","2.1 s","ACT","warn",True),
+events=[("14:41:02","KNOCK","1.05","5820","2.1 s","ACT","warn",True),
         ("14:38:51","OIL P","1.9 bar","6100","0.6 s","RTN","crit",False),
         ("14:33:10","INJ DC","94 %","6240","1.4 s","RTN","warn",False),
         ("14:21:44","LINK","stale","1180","3.0 s","RTN","warn",False),
@@ -254,7 +253,7 @@ p.append(frame(0,fy,480,FTR,f"background: {BG}; border-top: 1px solid {LINE};")
          + label(258,TT,"",14,DIM)
          + label(300,TT,"SINCE 13:59:04",14,DOTOFF,w=168,align="right") + "</div>")
 boards["Alarms.dc.html"]=doc("ALARMS",
-    "".join(chrome(("ALARMS",5), alarm="KNOCK 2.4 V", alarm_color=WARN,
+    "".join(chrome(("ALARMS",5), alarm="KNOCK 1.05", alarm_color=WARN,
                    latch="! 5", clock="14:41", lit=13)) + page_wrap(p))
 
 # ---------------- DIAG --------------------------------------------------
@@ -266,9 +265,9 @@ L=P
 p.append(label(L,P,"SERIAL LINK",14,CAPTION))
 for i,(n,v) in enumerate([("State","ONLINE"),("Age","12 ms"),("Updates","482 119"),("Bad frames","0")]):
     p.append(diag_row(L,P+18+i*RH2,n,v))
-p.append(label(L,P+94,"LATCHED THIS RUN",14,CAPTION))
-for i,t in enumerate(["OIL P 1.9 bar @ 6100","KNOCK 2.4 V @ 5820",""]):
-    p.append(label(L,P+112+i*14,t,14,DIM))
+p.append(label(L,P+94,"TRIGGER",14,CAPTION))
+p.append(diag_row(L,P+112,"Sync","SYNCED",GOOD))
+p.append(diag_row(L,P+112+RH2,"Errors","1  MISSING TOOTH",WARN))
 p.append(label(L,P+162,"CEL FLAGS",14,CAPTION))
 p.append(diag_row(L,P+180,"Raw","0x0000"))
 for i,n in enumerate(["CLT","IAT","MAP","WBO","EGT1","EGT2","EGT AL","KNOCK","FF SENS","DBW","FPR"]):
@@ -277,12 +276,12 @@ R2=CW+P
 p.append(label(R2,P,"PEAKS THIS RUN",14,CAPTION))
 peaks=[("RPM max","6240"),("MAP max","224"),("CLT max","103"),("IAT max","44"),
        ("Oil P max","5.2"),("Oil P min","1.9"),("Fuel P max","3.4"),("Fuel P min","2.9"),
-       ("Lambda min","0.78"),("Knock max","2.4"),("Inj DC max","94")]
+       ("Lambda min","0.78"),("Knock max","0.31"),("Inj DC max","94")]
 for i,(n,v) in enumerate(peaks):
     p.append(diag_row(R2,P+18+i*RH2,n,v))
 p.append(label(R2,P+208,"SERVICE AP",14,CAPTION))
 p.append(diag_row(R2,P+226,"Network","EcuDash"))
-p.append(diag_row(R2,P+243,"Key","carina1g"))
+p.append(diag_row(R2,P+243,"Key","ecudash1"))
 boards["Diag.dc.html"]=doc("DIAG",
     "".join(chrome(("DIAG",6), latch="! 5", clock="14:44")) + page_wrap(p))
 
@@ -290,7 +289,7 @@ boards["Diag.dc.html"]=doc("DIAG",
 STRIP=24; CATW=110; CATH=44; RW=480-CATW; SRH=32
 p=[frame(0,0,480,STRIP,f"background: {BG}; border-bottom: 1px solid {LINE};")
    + midlabel(10,0,STRIP,"STORED IN FLASH",14,DIM)
-   + midlabel(0,0,STRIP,f"{ARROW_UP} 5-12/18 {ARROW_DOWN}",14,DIM,w=480,align="center")
+   + midlabel(0,0,STRIP,f"{ARROW_UP} 5-12/20 {ARROW_DOWN}",14,DIM,w=480,align="center")
    + midlabel(0,0,STRIP,"ENGINE OFF",14,DIM,w=470,align="right") + "</div>"]
 p.append(frame(0,STRIP,CATW,286-STRIP,f"border-right: 1px solid {LINE};")+"</div>")
 cats=["Alarms","Limits","Shift","Display","Log"]
@@ -302,7 +301,7 @@ for i,name in enumerate(cats):
     p.append(midlabel(12,y,CATH,name,14,TEXT if sel else DIM))
 rows=[("Lean warn","0.90",""),("Lean crit","0.85",""),("Batt warn","12.2","V"),
       ("Batt crit","11.8","V"),("Charge warn","14.8","V"),("Charge crit","15.2","V"),
-      ("Knock warn","2.0","V"),("Knock crit","3.0","V")]
+      ("Knock warn","0.70","x"),("Knock crit","1.00","x")]
 for i,(n,v,u) in enumerate(rows):
     y=STRIP+i*SRH
     p.append(frame(CATW,y,RW,SRH,f"border-bottom: 1px solid {LINE};")+"</div>")

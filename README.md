@@ -41,13 +41,13 @@ renders this way.
 
 | | |
 |---|---|
-| **1 · Drive** — RPM, boost with peak hold, CLT, oil pressure, lambda, battery | **2 · Tune** — AFR against target, knock, ignition, injector PW and duty, MAP, TPS, RPM |
+| **1 · Drive** — RPM, boost with peak hold, CLT, oil pressure, mixture, battery | **2 · Tune** — mixture against target, knock against engine noise, ignition, EGO trim, injector duty, MAP, TPS, RPM |
 | ![Drive](docs/mockup/1-drive.png) | ![Tune](docs/mockup/2-tune.png) |
 | **3 · Temps** — CLT, IAT, ECU temp, oil pressure, fuel pressure, ΔFPR | **4 · Idle** — RPM against the idle target, valve duty, the PID's share, timing trim |
 | ![Temps](docs/mockup/3-temps.png) | ![Idle](docs/mockup/4-idle.png) |
 | **5 · Boost** — MAP against the boost target, solenoid duty, PID and error correction | **6 · Alarms** — everything that tripped this run, newest first, with the time |
 | ![Boost](docs/mockup/5-boost.png) | ![Alarms](docs/mockup/6-alarms.png) |
-| **7 · Diag** — link state, frame age, counters, what latched, CEL word, run peaks | **8 · Setup** — alarm limits and behaviour, shift points, brightness, logging |
+| **7 · Diag** — link state, frame age, counters, trigger sync and errors, CEL word, run peaks | **8 · Setup** — alarm limits and behaviour, shift points, brightness, logging |
 | ![Diag](docs/mockup/7-diag.png) | ![Setup](docs/mockup/8-setup.png) |
 
 Idle and Boost are pit work rather than driving pages, which is why they sit
@@ -76,6 +76,11 @@ has no clock in its own instrument cluster, so this is the only one.
 The page changes only when you swipe it. There is no idle timeout returning to
 Drive: on the car it moved the screen out from under you while you were still
 reading it.
+
+Mixture reads in lambda or AFR — one choice on the setup page, applied to
+every page. A cell whose sensor the ECU has flagged as failed reads `ERR`
+rather than the fallback value the ECU substitutes, and with the link down the
+live pages read `--` rather than the last frame that arrived.
 
 An out-of-range value lights its own cell — amber for a warning, red for
 critical — and names itself in the status bar. Nothing but a swipe ever changes

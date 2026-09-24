@@ -32,8 +32,7 @@ private:
     // records those properly; nothing else on the dash says whether the ECU
     // is keeping sync.
     lv_obj_t* sync_ = nullptr;
-    lv_obj_t* triggerErrors_ = nullptr;
-    lv_obj_t* lastTriggerError_ = nullptr;
+    lv_obj_t* triggerErrors_ = nullptr;   // count, and the last one named
 
     // Peaks column.
     lv_obj_t* peakValues_[11] = {};
