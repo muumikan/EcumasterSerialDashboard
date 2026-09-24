@@ -511,6 +511,20 @@ void DashUi::update(const EngineDataModel& model, uint32_t nowMs, bool clockTick
         lastRevision_ = model.revision();
         evaluatedLink_ = link;
         alarms_.evaluate(model.snapshot(), link, rtc_->now(), nowMs);
+
+        // A run starts when the engine does. The dash stays powered with the
+        // ignition off - it has to, to serve the logs - so a power cycle no
+        // longer marks one, and without this the second drive of the day
+        // reported the first one's peaks as its own. The alarm list is not
+        // touched: it is the record of the whole day and says when each thing
+        // happened.
+        const bool running = alarms_.engineRunning();
+        if (running && !runActive_) {
+            peaks_ = RunPeaks{};
+            alarms_.clearLatched();
+        }
+        runActive_ = running;
+
         if (changed) {
             peaks_.record(model.snapshot());
             if (!sweeping) {

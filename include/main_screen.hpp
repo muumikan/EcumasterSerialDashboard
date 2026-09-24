@@ -31,7 +31,6 @@ private:
     Tile lambda_;
     Tile battery_;
 
-    float boostPeak_ = -9.0f;
 
     bool mixtureAfr_ = false;
     uint16_t rpmFullScale_ = 7500;

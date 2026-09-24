@@ -9,7 +9,7 @@
 
 namespace ecu {
 
-// Peak hold for the run, cleared on power cycle. Recorded once by DashUi and
+// Peak hold for the run, cleared when the engine starts. Recorded once by DashUi and
 // read by the diagnostics page.
 struct RunPeaks {
     uint16_t rpm = 0;

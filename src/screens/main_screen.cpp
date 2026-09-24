@@ -150,13 +150,16 @@ void MainScreen::update(const EngineDataModel& model,
 
     // From the run peaks, which see every frame, rather than from what this
     // page happened to be painted with: a peak between two repaints is still
-    // the peak.
-    const float peak = peaks.seeded ? boostBar(peaks.mapKpa, peaks.baroKpa) : boostPeak_;
-    if (peak > boostPeak_) {
-        boostPeak_ = peak;
-        lv_obj_set_pos(boostPeakMark_, barX(boostPeak_), 0);
-        snprintf(text, sizeof(text), "Peak %+.2f bar", boostPeak_);
+    // the peak. Nothing is held here, so a new run starts the mark afresh.
+    if (peaks.seeded) {
+        const float peak = boostBar(peaks.mapKpa, peaks.baroKpa);
+        lv_obj_set_pos(boostPeakMark_, barX(peak), 0);
+        lv_obj_clear_flag(boostPeakMark_, LV_OBJ_FLAG_HIDDEN);
+        snprintf(text, sizeof(text), "Peak %+.2f bar", peak);
         setLabelText(boostPeakLabel_, text);
+    } else {
+        lv_obj_add_flag(boostPeakMark_, LV_OBJ_FLAG_HIDDEN);
+        setLabelText(boostPeakLabel_, "Peak --");
     }
 
     clt_.setInt(s.cltC);

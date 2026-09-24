@@ -140,6 +140,7 @@ private:
     bool apServing_ = false;
     uint8_t apClients_ = 0xFF;
     bool engineWasRunning_ = false;
+    bool runActive_ = false;   // the engine was running at the last evaluation
 };
 
 }  // namespace ecu
